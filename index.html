@@ -45,6 +45,25 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .brief-card .controls { margin: 6px 0; line-height: 1.55; font-size: 14px; }
 .brief-card ul { margin: 6px 0 12px 18px; padding: 0; }
 .brief-card li { margin-bottom: 6px; }
+.settings-btn { left: auto; right: 12px; }
+#settingsView { position: fixed; inset: 0; background: rgba(29,29,27,0.88); display: flex; justify-content: center; align-items: center; z-index: 4000; }
+.set-card { max-width: 660px; }
+.set-tabs { display: flex; gap: 6px; margin: 10px 0 8px; }
+.set-tabs button { flex: 1; margin: 0; padding: 7px 4px; font-size: 14px; background: #e3d6b8; box-shadow: 2px 2px 0 #1d1d1b; }
+.set-tabs button.on { background: #f2b134; }
+.set-note { color: #5a5547; font-size: 13px; margin: 6px 0 10px; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 7px 0; }
+.set-row input[type=range] { flex: 1; max-width: 250px; }
+.set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; }
+.set-player { border-top: 2px solid #cdbf9d; padding-top: 6px; margin-top: 6px; }
+.bind-btn { margin: 0; padding: 3px 8px; font-size: 13px; min-width: 74px; box-shadow: 2px 2px 0 #1d1d1b; background: #fff8e6; }
+.bind-btn.wait { background: #f2b134; }
+.toggle { margin: 0; padding: 4px 12px; font-size: 13px; min-width: 66px; box-shadow: 2px 2px 0 #1d1d1b; }
+.toggle.off { background: #cdbf9d; }
+.sw { display: inline-block; width: 26px; height: 26px; border: 3px solid #1d1d1b; margin: 2px; padding: 0; box-shadow: none; }
+.sw.sel { outline: 3px solid #c9501f; outline-offset: 1px; }
+.sw:disabled { opacity: 0.2; box-shadow: none; }
+.small-btn { margin: 8px 8px 0 0; padding: 6px 12px; font-size: 13px; box-shadow: 2px 2px 0 #1d1d1b; background: #e3d6b8; }
 </style>
 </head>
 <body>
@@ -53,6 +72,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <div id="menu">
 <canvas id="menuBg"></canvas>
 <button class="legacy-btn" onclick="openLegacy()">Legacy</button>
+<button class="legacy-btn settings-btn" onclick="openSettings()">Settings</button>
 <div class="menu-content">
 <h1>Study Guide</h1>
 
@@ -95,6 +115,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <button id="menuBtn" onclick="backToMenu()">MAIN MENU</button>
 <button id="helpBtn" onclick="openBriefing()">HOW TO PLAY</button>
 <button id="soundBtn" onclick="toggleSound(); this.blur()">SOUND: ON</button>
+<button id="setBtn" onclick="this.blur(); openSettings()">SETTINGS</button>
 <div class="controls" id="controlsDisplay"></div>
 </div>
 
@@ -107,6 +128,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 </div>
 </div>
 
+<div id="settingsView" style="display:none">
+<div class="brief-card set-card">
+<h1>Settings</h1>
+<div class="set-tabs" id="setTabs"></div>
+<div id="setBody"></div>
+<button class="menu-button" onclick="closeSettings()">DONE</button>
+</div>
+</div>
+
 <div id="legacyView"><button class="legacy-back" onclick="closeLegacy()">&larr; Back</button><iframe id="legacyFrame" title="Legacy"></iframe></div>
 
 <div id="briefing" style="display:none">
@@ -115,6 +145,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <h2 id="briefTitle"></h2>
 <div class="controls" id="briefBody"></div>
 <button class="menu-button" onclick="closeBriefing()">READY</button>
+<button class="menu-button back-button" onclick="openSettings()">SETTINGS</button>
 </div>
 </div>
 
@@ -151,6 +182,47 @@ let playerTouchingBall = [];
 const keys = {};
 const pressed = {};
 
+// Study preferences: saved in the browser so the revision setup is remembered.
+const PALETTE = [["Blue","#248bff"],["Sky","#55b5ff"],["Red","#ff4b55"],["Pink","#ff858a"],["Green","#2fb457"],["Lime","#8fcf2a"],["Orange","#ff9a1f"],["Gold","#d9a400"],["Purple","#9b4dff"],["Teal","#19b5a5"],["Brown","#a0643c"],["Charcoal","#444444"]];
+const ACTIONS = [["left","Move left"],["right","Move right"],["jump","Jump"],["slide","Slide"],["set","Set / Lift / Shoot"],["spike","Spike / Smash / Dribble-Steal"]];
+const DEFAULT_BINDS = [
+  { left: "a", right: "d", jump: "w", slide: "s", set: "e", spike: "q" },
+  { left: "j", right: "l", jump: "i", slide: "k", set: "o", spike: "u" },
+  { left: "arrowleft", right: "arrowright", jump: "arrowup", slide: "arrowdown", set: "shift", spike: "enter" },
+  { left: "numpad1", right: "numpad3", jump: "numpad5", slide: "numpad2", set: "numpad6", spike: "numpad4" }
+];
+const BOOL_KEYS = ["sound", "musicOn", "powerups", "particles", "cues", "hints", "menuAnim", "autoPause", "crowd"];
+function defaultSettings() {
+  return { binds: DEFAULT_BINDS.map(b => Object.assign({}, b)), colors: ["#248bff", "#55b5ff", "#ff4b55", "#ff858a"],
+    master: 0.8, sfx: 1, music: 0.5, sound: true, musicOn: true, powerups: false, particles: true, cues: true, hints: true, menuAnim: true, autoPause: true, crowd: true };
+}
+function loadSettings() {
+  const st = defaultSettings();
+  try {
+    const raw = localStorage.getItem("sg-prefs");
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (Array.isArray(o.binds)) o.binds.slice(0, 4).forEach((b, i) => { if (b && typeof b === "object") ACTIONS.forEach(([a]) => { if (typeof b[a] === "string" && b[a]) st.binds[i][a] = b[a]; }); });
+      if (Array.isArray(o.colors)) o.colors.slice(0, 4).forEach((c, i) => { if (PALETTE.some(p => p[1] === c)) st.colors[i] = c; });
+      ["master", "sfx", "music"].forEach(k => { if (typeof o[k] === "number" && o[k] >= 0 && o[k] <= 1) st[k] = o[k]; });
+      BOOL_KEYS.forEach(k => { if (typeof o[k] === "boolean") st[k] = o[k]; });
+    }
+  } catch (e) {}
+  return st;
+}
+let settings = loadSettings();
+function saveSettings() { try { localStorage.setItem("sg-prefs", JSON.stringify(settings)); } catch (e) {} }
+function toMap(b) { return { left: [b.left], right: [b.right], jump: [b.jump], slide: [b.slide], set: [b.set], spike: [b.spike] }; }
+function keyLabel(k) {
+  const m = { arrowleft: "←", arrowright: "→", arrowup: "↑", arrowdown: "↓", " ": "SPACE" };
+  if (m[k]) return m[k];
+  if (k.startsWith("numpad")) return "NUM " + k.slice(6).toUpperCase();
+  return k.toUpperCase();
+}
+function colorName(hex) { const f = PALETTE.find(p => p[1] === hex); return f ? f[0] : "Custom"; }
+function teamName(side) { return colorName(settings.colors[side === 0 ? 0 : 2]).toUpperCase(); }
+function applyPlayerSettings() { players.forEach(p => { p.color = settings.colors[p.slot]; p.map = toMap(settings.binds[p.bindSlot]); }); }
+
 // Review the key terms before moving on to the next chapter.
 function normalizeKey(e) {
   if (e.code && e.code.startsWith("Numpad")) return e.code.toLowerCase();
@@ -176,6 +248,130 @@ function closeLegacy() {
   legacyOpen = false;
 }
 
+// Settings panel: tabs for shortcut keys, colours, sound and general options.
+let settingsOpen = false, rebinding = null, setTab = "controls", settingsPaused = false, lastPreview = 0;
+const SLOT_NAMES = ["Player 1 · left side", "Player 2 · left side in 2 vs 2, and the right-side opponent in 1 vs 1", "Player 3 · right side (2 vs 2 only)", "Player 4 · right side (2 vs 2 only)"];
+const SET_TABS = [["controls", "Keys"], ["colors", "Colours"], ["audio", "Sound"], ["general", "General"]];
+function openSettings() {
+  if (settingsOpen) return;
+  settingsOpen = true; rebinding = null;
+  settingsPaused = gameStarted && !paused && !briefingOpen && !gameOver && !statsOpen;
+  if (settingsPaused) setPaused(true);
+  for (const k in keys) keys[k] = false;
+  renderSettings();
+  document.getElementById("settingsView").style.display = "flex";
+}
+function closeSettings() {
+  if (!settingsOpen) return;
+  settingsOpen = false; rebinding = null;
+  document.getElementById("settingsView").style.display = "none";
+  applyPlayerSettings(); saveSettings();
+  if (gameStarted) updateControls();
+  if (briefingOpen) openBriefing();
+  if (settingsPaused) setPaused(false);
+  settingsPaused = false;
+  for (const k in keys) keys[k] = false;
+  for (const k in pressed) delete pressed[k];
+}
+function setTabTo(t) { setTab = t; rebinding = null; renderSettings(); }
+function toggleOpt(k) {
+  settings[k] = !settings[k];
+  if (k === "sound") { soundOn = settings.sound; syncSound(); }
+  if (k === "musicOn") syncSound();
+  if (k === "hints") applyHints();
+  saveSettings(); renderSettings();
+}
+function applyHints() { document.getElementById("controlsDisplay").style.display = settings.hints ? "" : "none"; }
+function setVol(k, v) {
+  settings[k] = v / 100; applyVolumes(); saveSettings();
+  const l = document.getElementById("vol_" + k); if (l) l.textContent = v + "%";
+  const now = Date.now();
+  if (k !== "music" && now - lastPreview > 180) { lastPreview = now; if (soundOn) sfx.bounce(); }
+}
+function startRebind(slot, action) { rebinding = { slot, action }; renderSettings(); }
+function bindable(key) {
+  if (!key || key === "escape" || key === "m" || key === "tab" || key === "meta" || key === "control" || key === "alt" || key === "capslock" || key === "dead" || key === "unidentified" || key === "contextmenu") return false;
+  return !/^f\d+$/.test(key);
+}
+function assignBind(slot, action, key) {
+  const old = settings.binds[slot][action];
+  for (let i = 0; i < 4; i++) for (const [a] of ACTIONS) { if (settings.binds[i][a] === key && !(i === slot && a === action)) settings.binds[i][a] = old; }
+  settings.binds[slot][action] = key;
+  saveSettings();
+}
+function resetBinds() { settings.binds = DEFAULT_BINDS.map(b => Object.assign({}, b)); saveSettings(); renderSettings(); }
+function pickColor(slot, hex) {
+  if (settings.colors.some((c, i) => i !== slot && c === hex)) return;
+  settings.colors[slot] = hex; saveSettings(); renderSettings();
+}
+function resetAllSettings() {
+  settings = defaultSettings(); soundOn = settings.sound;
+  applyVolumes(); syncSound(); applyHints(); saveSettings(); renderSettings();
+}
+function goFullscreen() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  } catch (e) {}
+}
+function renderSettings() {
+  document.getElementById("setTabs").innerHTML = SET_TABS.map(t => `<button class="${t[0] === setTab ? "on" : ""}" onclick="setTabTo('${t[0]}')">${t[1]}</button>`).join("");
+  const tog = k => `<button class="toggle ${settings[k] ? "" : "off"}" onclick="toggleOpt('${k}')">${settings[k] ? "ON" : "OFF"}</button>`;
+  const row = (label, ctl, note) => `<div class="set-row"><span>${label}${note ? `<br><span class="set-note">${note}</span>` : ""}</span>${ctl}</div>`;
+  let h = "";
+  if (setTab === "controls") {
+    h += '<p class="set-note">Click a key box, then press the new key. Esc cancels. If the key is already used, the two keys swap. M (sound) and Esc (pause) are reserved.</p>';
+    for (let slot = 0; slot < 4; slot++) {
+      h += `<div class="set-player"><b style="color:${settings.colors[slot]}">${SLOT_NAMES[slot]}</b><div class="set-grid">`;
+      ACTIONS.forEach(([a, label]) => {
+        const waiting = rebinding && rebinding.slot === slot && rebinding.action === a;
+        h += `<div class="set-row"><span>${label}</span><button class="bind-btn ${waiting ? "wait" : ""}" onclick="startRebind(${slot},'${a}')">${waiting ? "press a key…" : keyLabel(settings.binds[slot][a])}</button></div>`;
+      });
+      h += "</div></div>";
+    }
+    h += '<button class="small-btn" onclick="resetBinds()">RESET KEYS TO DEFAULT</button>';
+  } else if (setTab === "colors") {
+    h += '<p class="set-note">Pick a colour for each player. A colour already used by another player is greyed out. The team name shown in results follows the first player of each side.</p>';
+    for (let slot = 0; slot < 4; slot++) {
+      h += `<div class="set-player"><b style="color:${settings.colors[slot]}">${SLOT_NAMES[slot]}</b> <span class="set-note">${colorName(settings.colors[slot])}</span><div>`;
+      PALETTE.forEach(([n, hex]) => {
+        const used = settings.colors.some((c, i) => i !== slot && c === hex);
+        h += `<button class="sw ${settings.colors[slot] === hex ? "sel" : ""}" style="background:${hex}" title="${n}" ${used ? "disabled" : ""} onclick="pickColor(${slot},'${hex}')"></button>`;
+      });
+      h += "</div></div>";
+    }
+  } else if (setTab === "audio") {
+    const sl = (k, label) => row(label, `<input type="range" min="0" max="100" value="${Math.round(settings[k] * 100)}" oninput="setVol('${k}', +this.value)"><span id="vol_${k}" style="width:42px;text-align:right">${Math.round(settings[k] * 100)}%</span>`);
+    h += sl("master", "Master volume") + sl("sfx", "Effects volume") + sl("music", "Music volume");
+    h += row("Sound", tog("sound"), "Turns all effects and music on or off (also the M key).") + row("Background music", tog("musicOn"), "A calm looping track.");
+  } else {
+    h += row("Power-ups", tog("powerups"), "Switch for the upcoming power-ups. It is only stored for now and changes nothing yet.");
+    h += row("Hit effects (particles)", tog("particles"), "Burst of colour on hits.");
+    h += row("Ball and shot cue rings", tog("cues"), "Rings that show when a hit, steal or shot is available.");
+    h += row("On-screen controls list", tog("hints"), "Shows the key list under the court.");
+    h += row("Crowd in the background", tog("crowd"), "Spectators who cheer when a point is scored.");
+    h += row("Animated menu background", tog("menuAnim"));
+    h += row("Pause when the window loses focus", tog("autoPause"));
+    h += '<button class="small-btn" onclick="goFullscreen()">FULLSCREEN ON / OFF</button><button class="small-btn" onclick="resetAllSettings()">RESET ALL SETTINGS</button>';
+  }
+  document.getElementById("setBody").innerHTML = h;
+}
+// Capture phase: while the settings panel is open it owns the keyboard.
+document.addEventListener("keydown", e => {
+  if (!settingsOpen) return;
+  e.stopImmediatePropagation();
+  const key = normalizeKey(e);
+  if (rebinding) {
+    e.preventDefault();
+    if (bindable(key)) { assignBind(rebinding.slot, rebinding.action, key); rebinding = null; }
+    else if (key === "escape") rebinding = null;
+    renderSettings();
+    return;
+  }
+  if (key === "escape") { e.preventDefault(); closeSettings(); }
+}, true);
+document.addEventListener("keyup", e => { if (settingsOpen && rebinding) e.stopImmediatePropagation(); }, true);
+
 document.addEventListener("keydown", e => {
   if (document.activeElement && document.activeElement.tagName === "INPUT") return;
   if (legacyOpen) return;
@@ -191,7 +387,10 @@ document.addEventListener("keydown", e => {
   keys[key] = true;
 });
 document.addEventListener("keyup", e => { keys[normalizeKey(e)] = false; });
-window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
+window.addEventListener("blur", () => {
+  for (const k in keys) keys[k] = false;
+  if (settings.autoPause && gameStarted && !briefingOpen && !gameOver && !statsOpen && !settingsOpen && !legacyOpen && !paused) setPaused(true);
+});
 
 // Flashcards: quiz yourself, then check the answer.
 function newInput() {
@@ -228,11 +427,11 @@ let players = [];
 // Cross-reference with the textbook chapter.
 function createPlayers() {
   players = [];
-  const m = (l, r, j, s, e, q) => ({ left: [l], right: [r], jump: [j], slide: [s], set: [e], spike: [q] });
-  players.push(createPlayer(gameMode === 1 ? 180 : 150, 0, "#248bff", m("a","d","w","s","e","q")));
-  if (gameMode === 2) players.push(createPlayer(300, 0, "#55b5ff", m("j","l","i","k","o","u")));
-  players.push(createPlayer(gameMode === 1 ? 720 : 600, 1, "#ff4b55", m("arrowleft","arrowright","arrowup","arrowdown","shift","enter")));
-  if (gameMode === 2) players.push(createPlayer(750, 1, "#ff858a", m("numpad1","numpad3","numpad5","numpad2","numpad6","numpad4")));
+  const add = (slot, x, side, bs) => { const p = createPlayer(x, side, settings.colors[slot], toMap(settings.binds[bs === undefined ? slot : bs])); p.slot = slot; p.bindSlot = bs === undefined ? slot : bs; players.push(p); };
+  add(0, gameMode === 1 ? 180 : 150, 0);
+  if (gameMode === 2) add(1, 300, 0);
+  add(2, gameMode === 1 ? 720 : 600, 1, gameMode === 1 ? 1 : 2);
+  if (gameMode === 2) add(3, 750, 1);
   playerTouchingBall = players.map(() => false);
 }
 
@@ -241,8 +440,8 @@ let particles = [];
 
 let pendingMode = 1, sport = "volleyball";
 const THEMES = {
-  volleyball: { bg: "linear-gradient(#9fd0d4 72%, #e2b977 72%)", floor: "#e2b977" },
-  badminton:  { bg: "linear-gradient(#7d9a86 72%, #b57a43 72%)", floor: "#b57a43" },
+  volleyball: { bg: "linear-gradient(#9fd0d4 72%, #e2b977 72%)", floor: "#dcae68" },
+  badminton:  { bg: "linear-gradient(#7d9a86 72%, #2f6b4a 72%)", floor: "#2f6b4a" },
   basketball: { bg: "linear-gradient(#cfc8ba 62%, #b9824a 62%)", floor: "#a56d37" },
 
 };
@@ -299,12 +498,12 @@ function menuBgFrame(t) {
     const w = mbg.width, h = mbg.height;
     mctx.fillStyle = "#2b6f73"; mctx.fillRect(0, 0, w, h);
     mctx.fillStyle = "#327a7e";
-    const off = (t * 0.03) % 120;
+    const off = settings.menuAnim ? (t * 0.03) % 120 : 0;
     for (let x = -h + off; x < w; x += 120) {
       mctx.beginPath(); mctx.moveTo(x, 0); mctx.lineTo(x + 60, 0); mctx.lineTo(x + 60 + h, h); mctx.lineTo(x + h, h); mctx.fill();
     }
     mItems.forEach(it => {
-      it.x += it.vx; it.y += it.vy; it.a += it.va;
+      if (settings.menuAnim) { it.x += it.vx; it.y += it.vy; it.a += it.va; }
       if (it.x < -60) it.x = w + 60; if (it.x > w + 60) it.x = -60;
       if (it.y < -60) it.y = h + 60; if (it.y > h + 60) it.y = -60;
       drawMenuItem(it);
@@ -358,7 +557,7 @@ function setupGameScreen(mode, s) {
   document.getElementById("gameArea").style.display = "block";
   score1 = 0; score2 = 0; gameOver = false; particles = []; lastHitSide = -1;
   resetStats(); hideStats();
-  createPlayers();
+  createPlayers(); dust = [];
   updateScore();
   updateControls();
 }
@@ -383,19 +582,20 @@ function startGame(mode, s) {
 function controlsHTML() {
   const S = SPORTS[sport];
   const spk = sport === "badminton" ? "Clear/Smash (hold)" : S.spikeName;
-  const ab = (sl, se, sk) => `<span class="abilities">Slide: ${sl} | ${S.setName}: ${se} | ${spk}: ${sk}</span>`;
+  const blk = (slot, label, bs) => {
+    const b = settings.binds[bs === undefined ? slot : bs], L = keyLabel;
+    return `<b style="color:${settings.colors[slot]}">${label}</b><br>Move: ${L(b.left)} / ${L(b.right)} | Jump: ${L(b.jump)}<br><span class="abilities">Slide: ${L(b.slide)} | ${S.setName}: ${L(b.set)} | ${spk}: ${L(b.spike)}</span>`;
+  };
+  const t0 = teamName(0), t1 = teamName(1);
   if (gameMode === 1) {
-    return `<b style="color:#248bff">PLAYER 1 (BLUE)</b><br>Move: A / D | Jump: W<br>${ab("S", "E", "Q")}<br><br>
-${bot ? '<b style="color:#ff4b55">BOT (RED) · ' + bot.level.toUpperCase() + '</b>' : '<b style="color:#ff4b55">PLAYER 2 (RED)</b><br>Move: ← / → | Jump: ↑<br>' + ab("↓", "SHIFT", "ENTER")}`;
+    return blk(0, `PLAYER 1 (${t0})`) + "<br><br>" +
+      (bot ? `<b style="color:${settings.colors[2]}">BOT (${t1}) · ${bot.level.toUpperCase()}</b>` : blk(2, `PLAYER 2 (${t1})`, 1));
   }
-  return `<b style="color:#248bff">PLAYER 1 (BLUE)</b><br>Move: A / D | Jump: W<br>${ab("S", "E", "Q")}<br><br>
-<b style="color:#55b5ff">PLAYER 2 (BLUE)</b><br>Move: J / L | Jump: I<br>${ab("K", "O", "U")}<br><br>
-<b style="color:#ff4b55">PLAYER 3 (RED)</b><br>Move: ← / → | Jump: ↑<br>${ab("↓", "SHIFT", "ENTER")}<br><br>
-<b style="color:#ff858a">PLAYER 4 (RED)</b><br>Move: NUMPAD 1 / 3 | Jump: NUMPAD 5<br>${ab("NUMPAD 2", "NUMPAD 6", "NUMPAD 4")}`;
+  return blk(0, `PLAYER 1 (${t0})`) + "<br><br>" + blk(1, `PLAYER 2 (${t0})`) + "<br><br>" + blk(2, `PLAYER 3 (${t1})`) + "<br><br>" + blk(3, `PLAYER 4 (${t1})`);
 }
-
 function updateControls() {
   document.getElementById("controlsDisplay").innerHTML = controlsHTML() + `<br><br>First ${gameMode === 1 ? "player" : "team"} to ${winScore()} points wins (win by 2).`;
+  applyHints();
 }
 
 const BRIEF = {
@@ -606,6 +806,7 @@ function awardPoint(winnerSide) {
 
 // Mnemonic to help remember this section.
 function createParticles(x, y, color, count = 12) {
+  if (!settings.particles) return;
   for (let i = 0; i < count; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, life: 30, color });
 }
 // Past-paper style question for self-assessment.
@@ -624,14 +825,25 @@ function canHit(p) {
 }
 
 // Audio notes: short cues help recall, so each one stays brief.
-let audioCtx = null, soundOn = true;
-function audioReady() {
-  if (!soundOn) return null;
+let audioCtx = null, soundOn = settings.sound, busMaster = null, busSfx = null, busMus = null;
+function getCtx() {
   try {
-    if (!audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; audioCtx = new AC(); }
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+      audioCtx = new AC();
+      busMaster = audioCtx.createGain(); busSfx = audioCtx.createGain(); busMus = audioCtx.createGain();
+      const soft = audioCtx.createBiquadFilter(); soft.type = "lowpass"; soft.frequency.value = 2600;
+      busSfx.connect(busMaster); busMus.connect(soft); soft.connect(busMaster); busMaster.connect(audioCtx.destination);
+      applyVolumes();
+    }
     if (audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
   } catch (e) { return null; }
+}
+function audioReady() { return soundOn ? getCtx() : null; }
+function applyVolumes() {
+  if (!audioCtx) return;
+  busMaster.gain.value = settings.master; busSfx.gain.value = settings.sfx; busMus.gain.value = settings.music * 0.8;
 }
 function tone(freq, dur, type, vol, endFreq, delay) {
   const a = audioReady(); if (!a) return;
@@ -643,7 +855,7 @@ function tone(freq, dur, type, vol, endFreq, delay) {
     if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t0 + dur);
     g.gain.setValueAtTime(vol || 0.15, t0);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    o.connect(g); g.connect(a.destination);
+    o.connect(g); g.connect(busSfx);
     o.start(t0); o.stop(t0 + dur + 0.02);
   } catch (e) {}
 }
@@ -656,7 +868,7 @@ function hiss(dur, vol, freq, delay) {
     const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
     f.type = "bandpass"; f.frequency.value = freq || 1500;
     g.gain.value = vol || 0.2;
-    src.buffer = buf; src.connect(f); f.connect(g); g.connect(a.destination);
+    src.buffer = buf; src.connect(f); f.connect(g); g.connect(busSfx);
     src.start(t0);
   } catch (e) {}
 }
@@ -676,7 +888,7 @@ const sfx = {
   fault() { tone(180, 0.22, "sawtooth", 0.16, 90); tone(140, 0.25, "sawtooth", 0.12, 70, 0.12); },
   dribble() { tone(130, 0.1, "sine", 0.3, 70); },
   shoot() { tone(300, 0.16, "sine", 0.12, 540); hiss(0.1, 0.1, 1800); },
-  swish() { hiss(0.32, 0.22, 3200); tone(880, 0.12, "triangle", 0.1, 1200, 0.05); tone(660, 0.22, "triangle", 0.12, null, 0.12); },
+  swish() { cheerCrowd(1700); hiss(0.32, 0.22, 3200); tone(880, 0.12, "triangle", 0.1, 1200, 0.05); tone(660, 0.22, "triangle", 0.12, null, 0.12); },
   rim() { tone(520, 0.12, "square", 0.08, 320); tone(780, 0.08, "triangle", 0.08); },
   steal() { hiss(0.1, 0.3, 1200); tone(200, 0.1, "square", 0.12, 120); },
   block() { tone(240, 0.1, "sawtooth", 0.2, 90); hiss(0.06, 0.2, 900); },
@@ -684,14 +896,75 @@ const sfx = {
   serve() { tone(330, 0.1, "triangle", 0.2, 220); },
   bounce() { tone(230, 0.09, "sine", 0.22, 110); },
   net() { tone(150, 0.12, "square", 0.09, 90); hiss(0.06, 0.08, 500); },
-  point(side) { const b = side === 0 ? 523 : 392; tone(b, 0.14, "triangle", 0.18); tone(b * 1.5, 0.22, "triangle", 0.16, null, 0.1); },
-  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.28, "triangle", 0.2, null, i * 0.13)); }
+  point(side) { cheerCrowd(1700); const b = side === 0 ? 523 : 392; tone(b, 0.14, "triangle", 0.18); tone(b * 1.5, 0.22, "triangle", 0.16, null, 0.1); },
+  win() { cheerCrowd(7000); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.28, "triangle", 0.2, null, i * 0.13)); }
 };
-function toggleSound() {
-  soundOn = !soundOn;
+function syncSound() {
   document.getElementById("soundBtn").textContent = "SOUND: " + (soundOn ? "ON" : "OFF");
+  if (soundOn && settings.musicOn) musicStart(); else musicStop();
+}
+function toggleSound() {
+  soundOn = !soundOn; settings.sound = soundOn; saveSettings();
+  syncSound();
   if (soundOn) tone(660, 0.08, "triangle", 0.15);
 }
+
+// Background track for long study sessions: a slow four-chord loop built from simple notes.
+const MUSIC = { timer: null, step: 0, next: 0, out: null, hat: null };
+const CHORDS = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 66]];
+const SCALE = [69, 72, 74, 76, 79, 81];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function mNote(f, t, dur, type, vol, att) {
+  const a = audioCtx, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + (att || 0.02)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(MUSIC.out); o.start(t); o.stop(t + dur + 0.05);
+}
+function mNoise(t, vol, freq, dur) {
+  const a = audioCtx;
+  if (!MUSIC.hat) { const n = Math.floor(a.sampleRate * 0.25), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; MUSIC.hat = b; }
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = MUSIC.hat; f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 0.8;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f); f.connect(g); g.connect(MUSIC.out); src.start(t); src.stop(t + dur + 0.02);
+}
+function scheduleStep(st, t0) {
+  const bar = st >> 3, pos = st & 7, ch = CHORDS[bar], e = 0.357;
+  const t = pos % 2 ? t0 + 0.03 : t0;
+  if (pos === 0) { ch.forEach(n => mNote(mtof(n), t, e * 8, "sine", 0.05, 0.5)); mNote(mtof(ch[0] - 24), t, e * 3.5, "triangle", 0.2, 0.02); }
+  if (pos === 4) mNote(mtof(ch[0] - 24), t, e * 2.5, "triangle", 0.15, 0.02);
+  if (pos === 0 || pos === 4) { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); g.gain.setValueAtTime(0.22, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(g); g.connect(MUSIC.out); o.start(t); o.stop(t + 0.2); }
+  if (pos === 2 || pos === 6) mNoise(t, 0.09, 1800, 0.12);
+  if (pos % 2) mNoise(t, 0.035, 7000, 0.04);
+  const pat = [0, 2, 1, 3, 2, 1, 3, 2];
+  if (Math.random() < 0.78) mNote(mtof(ch[pat[pos]] + 12), t, 0.55, "triangle", 0.06, 0.01);
+  if ((pos === 0 || pos === 4) && Math.random() < 0.35) mNote(mtof(SCALE[Math.floor(Math.random() * SCALE.length)]), t + e, 1.1, "sine", 0.05, 0.03);
+}
+function musicTick() {
+  const a = audioCtx;
+  if (!a || !soundOn || !settings.musicOn) { musicStop(); return; }
+  if (MUSIC.next < a.currentTime) MUSIC.next = a.currentTime + 0.05;
+  while (MUSIC.next < a.currentTime + 1.5) {
+    try { scheduleStep(MUSIC.step, MUSIC.next); } catch (e) {}
+    MUSIC.next += 0.357; MUSIC.step = (MUSIC.step + 1) % 32;
+  }
+}
+function musicStart() {
+  if (MUSIC.timer || !soundOn || !settings.musicOn) return;
+  const a = getCtx(); if (!a) return;
+  MUSIC.out = a.createGain(); MUSIC.out.connect(busMus);
+  MUSIC.next = a.currentTime + 0.1; MUSIC.step = 0;
+  MUSIC.timer = setInterval(musicTick, 250); musicTick();
+}
+function musicStop() {
+  if (!MUSIC.timer) return;
+  clearInterval(MUSIC.timer); MUSIC.timer = null;
+  const o = MUSIC.out; MUSIC.out = null;
+  try { o.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); setTimeout(() => { try { o.disconnect(); } catch (e) {} }, 600); } catch (e) {}
+}
+["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { if (soundOn && settings.musicOn) musicStart(); }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && MUSIC.timer) musicTick(); });
+
 
 // Streak colours: yellow, orange, red, blue, then violet and it stays violet.
 const STREAK_COLORS = ["#ffd23f", "#ff9a1f", "#e8382a", "#2f7dff", "#9b4dff"];
@@ -702,14 +975,15 @@ function newSide() { return { points: 0, aces: 0, hits: 0, attacks: 0, sets: 0, 
 function resetStats() { stats = [newSide(), newSide()]; rally = 0; longestRally = 0; matchTicks = 0; statsOpen = false; streakOwner = [-1, -1]; }
 function fmtTime(ticks) { const sec = Math.floor(ticks / 60); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
 function showStats() {
-  const S = SPORTS[sport], blueWon = score1 > score2;
-  document.getElementById("statsTitle").textContent = blueWon ? "BLUE WINS!" : "RED WINS!";
+  const S = SPORTS[sport];
+  document.getElementById("statsTitle").textContent = (score1 > score2 ? teamName(0) : teamName(1)) + " WINS!";
   const rows = [["Points", "points"], ["Aces", "aces"], ["Total hits", "hits"], ["Attacks (" + S.spikeName.toLowerCase() + "s)", "attacks"], [S.setName.charAt(0) + S.setName.slice(1).toLowerCase() + " shots", "sets"]];
   if (sport === "badminton") { rows.push(["Drop shots", "drops"]); rows.push(["Best smash streak", "bestStreak"]); }
   if (sport === "basketball") { rows.length = 0; rows.push(["Points", "points"], ["Shots made", "made"], ["Shots taken", "shots"], ["3-pointers made", "threes"], ["Steals", "steals"], ["Blocks", "blocks"], ["Shoves landed", "shoves"]); }
-  const teamNames = gameMode === 1 ? (bot ? ["You", "Bot"] : ["Blue", "Red"]) : ["Blue team", "Red team"];
+  const cap = t => t.charAt(0) + t.slice(1).toLowerCase();
+  const teamNames = gameMode === 1 ? (bot ? ["You", "Bot"] : [cap(teamName(0)), cap(teamName(1))]) : [cap(teamName(0)) + " team", cap(teamName(1)) + " team"];
   let html = '<div class="stat-note">Final score ' + score1 + " - " + score2 + "</div>";
-  html += '<table class="stat-table"><tr><th></th><th style="color:#248bff">' + teamNames[0] + '</th><th style="color:#ff4b55">' + teamNames[1] + "</th></tr>";
+  html += '<table class="stat-table"><tr><th></th><th style="color:' + settings.colors[0] + '">' + teamNames[0] + '</th><th style="color:' + settings.colors[2] + '">' + teamNames[1] + "</th></tr>";
   rows.forEach(r => {
     const a = stats[0][r[1]], b = stats[1][r[1]];
     html += "<tr><td>" + r[0] + '</td><td class="' + (a > b ? "lead" : "") + '">' + a + '</td><td class="' + (b > a ? "lead" : "") + '">' + b + "</td></tr>";
@@ -837,7 +1111,7 @@ function shotModel(sx, sy, hoopIdx) {
 }
 function releasePoint(p) {
   const hi = p.side === 0 ? 1 : 0, cx = hoopCx(hoops[hi]), dir = cx > p.x ? 1 : -1;
-  return { sx: p.x + dir * 14, sy: p.y - 38, hi, dir };
+  return { sx: Math.max(hoops[0].bx + 16, Math.min(hoops[1].bx - 16, p.x + dir * 14)), sy: Math.min(p.y - 38, ground - 14), hi, dir };
 }
 function playerShotModel(p) { const r = releasePoint(p); return shotModel(r.sx, r.sy, r.hi); }
 
@@ -945,6 +1219,10 @@ function bbStep(b, fx, canScore) {
     });
     if (canScore && prevY < ry && b.y >= ry && b.vy > 0 && Math.abs(b.x - hoopCx(h)) < 28) scored = hi;
   });
+  // Final check: whatever the rim did, the ball stays inside the walls, ceiling and floor.
+  if (b.x < wl) b.x = wl; if (b.x > wr) b.x = wr;
+  if (b.y < b.r) b.y = b.r;
+  if (b.y > ground - b.r) { b.y = ground - b.r; if (b.vy > 0) b.vy = 0; }
   return scored;
 }
 // Check a full attempt in a throwaway copy: does this power drop in from this release point?
@@ -992,8 +1270,8 @@ function updateBasketball() {
     h.dribT = (h.dribT || 0) + (h.immune > 0 ? 0.5 : 0.28);
     const handY = h.y + 8, air = h.y < ground - 62;
     const phase = Math.abs(Math.sin(h.dribT));
-    ball.x = h.x + dir * 24;
-    ball.y = air ? h.y - 12 : (ground - ball.r) - phase * (ground - ball.r - handY);
+    ball.x = Math.max(hoops[0].bx + 16, Math.min(hoops[1].bx - 16, h.x + dir * 24));
+    ball.y = Math.min(ground - ball.r, air ? h.y - 12 : (ground - ball.r) - phase * (ground - ball.r - handY));
     ball.vx = 0; ball.vy = 0; ballTrail = [];
     return;
   }
@@ -1003,6 +1281,7 @@ function updateBasketball() {
     rim() { shotLive = false; sfx.rim(); },
     ground(vy) { if (vy > 3) sfx.thud(vy); shotLive = false; }
   };
+  if (!isFinite(ball.x + ball.y + ball.vx + ball.vy)) { bbSetup(scoreWaitSide); return; }
   const sc = bbStep(ball, fx, scoreWait === 0);
   if (sc >= 0) scoreBasket(sc === 1 ? 0 : 1, shotLive ? shotPts : 2);
   if (shotLive) { ballTrail.push({ x: ball.x, y: ball.y }); if (ballTrail.length > 18) ballTrail.shift(); } else if (ballTrail.length) ballTrail.shift();
@@ -1010,7 +1289,9 @@ function updateBasketball() {
   players.forEach((p, i) => {
     if (scoreWait > 0 || gameOver) return;
     const dx = ball.x - p.x, dy = ball.y - (p.y - 10), dist = Math.hypot(dx, dy), min = ball.r + (p.slideTimer > 0 ? 32 : p.radius);
-    if (dist >= min || dist === 0) return;
+    // A loose ball can be picked up anywhere along the player's body, feet included.
+    const bodyY = Math.max(p.y - 10, Math.min(p.y + 30, ball.y));
+    if (shotLive ? (dist >= min || dist === 0) : Math.hypot(dx, ball.y - bodyY) >= min) return;
     if (shotLive) {
       if (p.side === players[shotBy].side || shotAge < SHOT_SAFE) return;
       const nx = dx / dist, ny = dy / dist, sp = Math.max(6, Math.hypot(ball.vx, ball.vy) * 0.7);
@@ -1263,10 +1544,10 @@ function movePlayers() {
     p.y += p.vy;
     if (p.y > ground - 60) { p.y = ground - 60; p.vy = 0; }
 
+    if (p.slideTimer > 0) { p.x += p.vx; p.vx *= 0.88; } else p.vx = 0;
+
     p.x = Math.max(25, Math.min(875, p.x));
     if (sport !== "basketball") { if (p.side === 0) p.x = Math.min(p.x, netX - 30); else p.x = Math.max(p.x, netX + 30); }
-
-    if (p.slideTimer > 0) { p.x += p.vx; p.vx *= 0.88; } else p.vx = 0;
   });
 }
 
@@ -1348,13 +1629,163 @@ function updateBall() {
 }
 
 // Cross-reference with the textbook chapter.
+let dust = [];
+function puff(x, y, n, spread, up) {
+  if (!settings.particles) return;
+  for (let i = 0; i < n; i++) dust.push({ x: x + (Math.random() - 0.5) * 10, y, vx: (Math.random() - 0.5) * spread, vy: -Math.random() * up, life: 22, max: 22, r: 3 + Math.random() * 3 });
+}
+// Movement tracker: walking phase, take-off and landing puffs, squash and stretch.
+function updateMotion() {
+  players.forEach(p => {
+    const air = p.y < ground - 60.5, dx = p.x - (p.px === undefined ? p.x : p.px);
+    p.px = p.x;
+    p.moving = !air && p.slideTimer <= 0 && Math.abs(dx) > 0.5;
+    if (p.moving) { p.walkT = (p.walkT || 0) + 0.38; if (((p.walkN = (p.walkN || 0) + 1) % 7) === 0) puff(p.x - Math.sign(dx) * 10, ground - 1, 1, 1.2, 0.6); }
+    else p.walkN = 0;
+    if (p.slideTimer > 0 && p.slideTimer % 3 === 0) puff(p.x - Math.sign(p.vx || 1) * 20, ground - 1, 1, 1.5, 0.8);
+    if (air && !p.wasAir) { puff(p.x, ground - 1, 5, 3.5, 1); p.sq = -6; }
+    if (!air && p.wasAir) { const f = Math.min(1, (p.lastVy || 0) / 10); puff(p.x, ground - 1, 4 + Math.round(f * 4), 3 + f * 3, 1.2); p.sq = 4 + Math.round(f * 5); }
+    p.lastVy = p.vy; p.wasAir = air;
+    if (p.sq > 0) p.sq--; else if (p.sq < 0) p.sq++;
+  });
+  dust.forEach(d => { d.x += d.vx; d.y += d.vy; d.vx *= 0.94; d.life--; });
+  dust = dust.filter(d => d.life > 0);
+}
 function updateParticles() {
   particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; });
   particles = particles.filter(p => p.life > 0);
+  updateMotion();
+}
+
+
+// Illustrations for each chapter: a painted backdrop per topic and a crowd of onlookers.
+let crowdUntil = 0;
+function cheerCrowd(ms) {
+  crowdUntil = performance.now() + ms;
+  hiss(Math.min(1.4, ms / 1200), 0.07, 1400); hiss(Math.min(1.4, ms / 1200), 0.05, 700, 0.1);
+}
+function seeded(n) { let v = n >>> 0; return () => { v = (v * 1664525 + 1013904223) >>> 0; return v / 4294967296; }; }
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = k => Math.max(0, Math.min(255, Math.round(((n >> k) & 255) * f)));
+  return "rgb(" + c(16) + "," + c(8) + "," + c(0) + ")";
+}
+const SHIRTS = ["#e8382a", "#2f7dff", "#f2b134", "#3ddc84", "#9b4dff", "#f4f4f4", "#ff8fb1", "#2a2a2a", "#19b5a5", "#ff9a1f"];
+const SKINS = ["#f1c9a5", "#d9a273", "#a8714a", "#6f4a2f", "#f7d9bd"];
+const HAIRS = ["#201510", "#4a2c17", "#8a5a2b", "#d8b45a", "#111111", "#7a3b1e"];
+// rows: [y, fans, size, band colour or null]
+const STANDS = {
+  volleyball: [[318, 36, 6.5, null], [334, 40, 7, null], [350, 44, 7.5, null]],
+  badminton: [[170, 34, 7.5, "#566a77"], [196, 36, 7.5, "#4b5e6a"], [222, 38, 7.5, "#566a77"], [248, 40, 7.5, "#4b5e6a"], [274, 42, 7.5, "#566a77"]],
+  basketball: [[96, 36, 8, "#2a3350"], [126, 38, 8, "#222a42"], [156, 40, 8, "#2a3350"], [186, 42, 8, "#222a42"], [216, 44, 8, "#2a3350"], [246, 46, 8, "#222a42"], [276, 48, 8, "#2a3350"]]
+};
+const CROWD = {};
+function buildCrowd(sp) {
+  const rnd = seeded(sp.length * 977 + 13), out = [];
+  STANDS[sp].forEach(([y, n, size, band], ri) => {
+    const row = { y, size, band, fans: [] }, step = (WIDTH + 20) / n;
+    for (let i = 0; i < n; i++) {
+      if (rnd() < 0.07) continue;
+      row.fans.push({ x: -10 + i * step + (rnd() - 0.5) * step * 0.5, r: size * (0.9 + rnd() * 0.2), shirt: shade(SHIRTS[Math.floor(rnd() * SHIRTS.length)], 0.78 + ri * 0.03),
+        skin: SKINS[Math.floor(rnd() * SKINS.length)], hair: HAIRS[Math.floor(rnd() * HAIRS.length)], ph: rnd() * 6.28, arms: rnd() < 0.45 });
+    }
+    out.push(row);
+  });
+  return out;
+}
+function drawCrowd(sp) {
+  if (!CROWD[sp]) CROWD[sp] = buildCrowd(sp);
+  const now = performance.now(), t = now / 1000, cheer = now < crowdUntil;
+  CROWD[sp].forEach(row => {
+    if (row.band) { ctx.fillStyle = row.band; ctx.fillRect(0, row.y - row.size * 1.2, WIDTH, row.size * 4.2); ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(0, row.y - row.size * 1.2, WIDTH, 2); }
+    row.fans.forEach(f => {
+      const wave = Math.max(0, Math.sin(t * 1.1 - f.x / 120) - 0.75) * 5;
+      const up = cheer ? Math.abs(Math.sin(t * 8 + f.ph)) * 6 : Math.sin(t * 1.8 + f.ph) * 0.7 + wave;
+      const y = row.y - up, r = f.r;
+      if (cheer && f.arms) {
+        ctx.strokeStyle = f.skin; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(f.x - r, y + r * 1.4); ctx.lineTo(f.x - r * 1.7, y - r * 1.5); ctx.moveTo(f.x + r, y + r * 1.4); ctx.lineTo(f.x + r * 1.7, y - r * 1.5); ctx.stroke();
+      }
+      ctx.fillStyle = f.shirt; ctx.beginPath(); ctx.ellipse(f.x, y + r * 2.2, r * 1.5, r * 1.35, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = f.skin; ctx.beginPath(); ctx.arc(f.x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = f.hair; ctx.beginPath(); ctx.arc(f.x, y - r * 0.1, r * 1.02, Math.PI, 0); ctx.fill();
+    });
+  });
+}
+const BACKDROP = {};
+function layer() { const c = document.createElement("canvas"); c.width = WIDTH; c.height = HEIGHT; return [c, c.getContext("2d")]; }
+function buildBackdrop(sp) {
+  const [bc, g] = layer(), [fc, f] = layer(), rnd = seeded(31 + sp.length);
+  const lin = (c, x0, y0, x1, y1, stops) => { const k = c.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, col]) => k.addColorStop(o, col)); return k; };
+  if (sp === "volleyball") {
+    g.fillStyle = lin(g, 0, 0, 0, 250, [[0, "#5fb9ec"], [1, "#d3f0fb"]]); g.fillRect(0, 0, WIDTH, 250);
+    const sun = g.createRadialGradient(760, 70, 4, 760, 70, 90); sun.addColorStop(0, "rgba(255,248,200,1)"); sun.addColorStop(0.3, "rgba(255,240,170,0.7)"); sun.addColorStop(1, "rgba(255,240,170,0)");
+    g.fillStyle = sun; g.fillRect(600, 0, 300, 200);
+    g.fillStyle = "rgba(255,255,255,0.9)";
+    [[150, 70, 60], [250, 90, 44], [520, 55, 55], [610, 80, 38], [380, 120, 40]].forEach(([x, y, w]) => { for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(x + i * w * 0.35, y + (i % 2) * 5, w * 0.5, w * 0.22, 0, 0, 6.3); g.fill(); } });
+    g.fillStyle = lin(g, 0, 250, 0, 300, [[0, "#2c86bd"], [1, "#58b4d4"]]); g.fillRect(0, 250, WIDTH, 50);
+    g.fillStyle = "rgba(255,255,255,0.55)";
+    for (let i = 0; i < 40; i++) g.fillRect(rnd() * WIDTH, 256 + rnd() * 38, 14 + rnd() * 20, 2);
+    g.fillStyle = "rgba(255,255,255,0.7)"; g.fillRect(0, 250, WIDTH, 2);
+    g.fillStyle = lin(g, 0, 298, 0, 445, [[0, "#f3dca6"], [1, "#deb06a"]]); g.fillRect(0, 298, WIDTH, 147);
+    g.fillStyle = "rgba(180,130,60,0.12)"; for (let i = 0; i < 160; i++) g.fillRect(rnd() * WIDTH, 300 + rnd() * 145, 3, 1.5);
+    [70, 835].forEach((x, k) => {
+      const d = k ? -1 : 1;
+      g.strokeStyle = "#6b4a2b"; g.lineWidth = 9; g.lineCap = "round"; g.beginPath(); g.moveTo(x, 330); g.quadraticCurveTo(x + d * 14, 270, x + d * 6, 215); g.stroke();
+      g.strokeStyle = "#2f8a4a"; g.lineWidth = 6;
+      for (let a = -2.6; a <= 0.2; a += 0.55) { g.beginPath(); g.moveTo(x + d * 6, 215); g.quadraticCurveTo(x + d * 6 + Math.cos(a) * 40, 215 + Math.sin(a) * 30 - 10, x + d * 6 + Math.cos(a) * 62, 215 + Math.sin(a) * 40 + 22); g.stroke(); }
+    });
+    [[200, 305, "#e8382a"], [700, 308, "#2f7dff"]].forEach(([x, y, c]) => {
+      g.fillStyle = "#6b4a2b"; g.fillRect(x - 1.5, y, 3, 36); g.fillStyle = c; g.beginPath(); g.ellipse(x, y, 34, 17, 0, Math.PI, 0); g.fill();
+      g.fillStyle = "rgba(255,255,255,0.55)"; g.beginPath(); g.ellipse(x, y - 1, 12, 15, 0, Math.PI, 0); g.fill();
+    });
+    f.strokeStyle = "rgba(255,255,255,0.9)"; f.lineWidth = 2;
+    for (let x = 20; x < WIDTH; x += 110) { f.fillStyle = "#8a6a43"; f.fillRect(x - 2, 366, 4, 24); }
+    f.beginPath(); f.moveTo(0, 372); for (let x = 20; x < WIDTH + 110; x += 110) f.quadraticCurveTo(x - 55, 378, x, 372); f.stroke();
+    f.fillStyle = "#ff9a1f"; for (let x = 75; x < WIDTH; x += 220) f.fillRect(x - 40, 384, 80, 10);
+  } else if (sp === "badminton") {
+    g.fillStyle = lin(g, 0, 0, 0, 322, [[0, "#12171c"], [0.12, "#1c2229"], [0.13, "#53656f"], [1, "#3f5160"]]); g.fillRect(0, 0, WIDTH, 322);
+    g.fillStyle = "#11161b"; for (let x = 0; x < WIDTH; x += 150) g.fillRect(x, 0, 8, 40);
+    for (let x = 60; x < WIDTH; x += 120) { const gl = g.createRadialGradient(x, 28, 2, x, 28, 70); gl.addColorStop(0, "rgba(255,250,225,0.8)"); gl.addColorStop(1, "rgba(255,250,225,0)"); g.fillStyle = gl; g.fillRect(x - 70, 0, 140, 110); g.fillStyle = "#fffbe8"; g.fillRect(x - 28, 24, 56, 8); }
+    g.fillStyle = "rgba(255,255,255,0.1)"; for (let x = 0; x < WIDTH; x += 90) g.fillRect(x, 44, 3, 270);
+    g.fillStyle = lin(g, 0, 322, 0, 445, [[0, "#3f8460"], [1, "#2d6848"]]); g.fillRect(0, 322, WIDTH, 123);
+    g.fillStyle = "rgba(255,255,255,0.07)"; for (let y = 330; y < 445; y += 11) g.fillRect(0, y, WIDTH, 1);
+    g.strokeStyle = "rgba(255,255,255,0.75)"; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 340); g.lineTo(WIDTH, 340); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.moveTo(40, 340); g.lineTo(0, 445); g.moveTo(860, 340); g.lineTo(900, 445); g.moveTo(450, 340); g.lineTo(450, 445); g.stroke();
+    f.fillStyle = "#1e4f9a"; f.fillRect(0, 298, WIDTH, 24); f.fillStyle = "rgba(255,255,255,0.85)";
+    for (let x = 0; x < WIDTH; x += 150) { f.fillRect(x + 10, 304, 90, 4); f.fillRect(x + 10, 312, 60, 3); }
+    f.fillStyle = "rgba(0,0,0,0.25)"; f.fillRect(0, 321, WIDTH, 2);
+  } else {
+    g.fillStyle = lin(g, 0, 0, 0, 330, [[0, "#0d111b"], [0.35, "#181f31"], [1, "#2b3550"]]); g.fillRect(0, 0, WIDTH, 330);
+    [110, 280, 450, 620, 790].forEach(x => { g.fillStyle = "rgba(255,244,200,0.08)"; g.beginPath(); g.moveTo(x - 7, 0); g.lineTo(x + 7, 0); g.lineTo(x + 95, 330); g.lineTo(x - 95, 330); g.fill(); g.fillStyle = "#fff3c4"; g.beginPath(); g.arc(x, 8, 7, 0, 6.3); g.fill(); });
+    [[170, "#c9501f"], [330, "#2f7dff"], [570, "#e8382a"], [730, "#f2b134"]].forEach(([x, c]) => { g.fillStyle = c; g.fillRect(x - 20, 10, 40, 46); g.beginPath(); g.moveTo(x - 20, 56); g.lineTo(x, 70); g.lineTo(x + 20, 56); g.fill(); g.fillStyle = "rgba(255,255,255,0.6)"; g.fillRect(x - 20, 24, 40, 3); });
+    g.fillStyle = lin(g, 0, 330, 0, 445, [[0, "#cd9355"], [1, "#a96f37"]]); g.fillRect(0, 330, WIDTH, 115);
+    g.fillStyle = "rgba(60,30,10,0.13)"; for (let y = 334; y < 445; y += 9) g.fillRect(0, y, WIDTH, 1);
+    for (let i = 0; i < 90; i++) { g.fillRect(rnd() * WIDTH, 330 + rnd() * 115, 1, 9); }
+    g.strokeStyle = "rgba(255,255,255,0.4)"; g.lineWidth = 3; g.beginPath(); g.ellipse(450, 392, 85, 17, 0, 0, 6.3); g.stroke();
+    g.beginPath(); g.moveTo(0, 334); g.lineTo(WIDTH, 334); g.stroke();
+    const cols = ["#c9501f", "#2f7dff", "#f4f4f4", "#e8382a", "#19b5a5", "#f2b134"];
+    for (let i = 0, x = 0; x < WIDTH; i++, x += 90) { f.fillStyle = "#10141f"; f.fillRect(x, 304, 90, 30); f.fillStyle = cols[i % 6]; f.fillRect(x + 6, 310, 78, 18); f.fillStyle = "rgba(255,255,255,0.8)"; f.fillRect(x + 12, 316, 40, 4); }
+    f.fillStyle = "rgba(0,0,0,0.3)"; f.fillRect(0, 333, WIDTH, 2);
+  }
+  if (sp !== "volleyball") { f.fillStyle = sp === "badminton" ? "rgba(6,10,18,0.5)" : "rgba(10,14,25,0.28)"; f.fillRect(0, 0, WIDTH, sp === "badminton" ? 322 : 300); }
+  return { back: bc, front: fc };
+}
+function drawBackdrop() {
+  if (!BACKDROP[sport]) BACKDROP[sport] = buildBackdrop(sport);
+  ctx.drawImage(BACKDROP[sport].back, 0, 0);
+  if (settings.crowd) drawCrowd(sport);
+  ctx.drawImage(BACKDROP[sport].front, 0, 0);
 }
 
 // Group study: compare answers with classmates.
 function drawParticles() {
+  dust.forEach(d => {
+    const k = d.life / d.max;
+    ctx.globalAlpha = 0.55 * k; ctx.fillStyle = "#efe6d2";
+    ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1.4 - 0.5 * k), 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
   particles.forEach(p => {
     ctx.globalAlpha = Math.max(0, p.life / 30);
     ctx.fillStyle = p.color;
@@ -1399,20 +1830,40 @@ function drawArms(p) {
 
 // Summary of this topic for exam revision.
 function drawPlayer(p) {
+  // Floor shadow: shrinks and fades as the player rises, so height is easy to read.
+  const rise = Math.max(0, ground - 60 - p.y), sh = Math.max(0.35, 1 - rise / 320);
+  ctx.fillStyle = "rgba(0,0,0," + (0.28 * sh).toFixed(3) + ")";
+  ctx.beginPath(); ctx.ellipse(p.x, ground + 2, 28 * sh, 5 * sh, 0, 0, Math.PI * 2); ctx.fill();
   if (p.slideTimer > 0) {
     ctx.fillStyle = p.color;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 35, 15, 0, 0, Math.PI * 2); ctx.fill();
   } else {
+    const air = p.y < ground - 60.5;
+    let sx = 1, sy = 1, bob = 0;
+    if (p.sq > 0) { sy = 1 - 0.012 * p.sq; sx = 1 + 0.014 * p.sq; }
+    else if (air && p.vy < -1) { sy = 1.07; sx = 0.94; }
+    if (p.moving) bob = -Math.abs(Math.sin(p.walkT || 0)) * 2.5;
+    ctx.save();
+    ctx.translate(p.x, p.y + 28 + bob); ctx.scale(sx, sy); ctx.translate(-p.x, -(p.y + 28));
     ctx.fillStyle = p.color;
     ctx.beginPath(); ctx.arc(p.x, p.y - 10, p.radius, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.arc(p.x + (p.side === 0 ? 8 : -8), p.y - 16, 4, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = p.color; ctx.lineWidth = 8; ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(p.x - 8, p.y + 12); ctx.lineTo(p.x - 12, p.y + 28);
-    ctx.moveTo(p.x + 8, p.y + 12); ctx.lineTo(p.x + 12, p.y + 28);
+    let fl = [p.x - 12, p.y + 28], fr = [p.x + 12, p.y + 28];
+    if (p.moving) {
+      const a = Math.sin(p.walkT || 0), b = Math.sin((p.walkT || 0) + Math.PI);
+      fl = [p.x - 8 + a * 11, p.y + 28 - Math.max(0, a) * 6]; fr = [p.x + 8 + b * 11, p.y + 28 - Math.max(0, b) * 6];
+    } else if (air) {
+      const spread = p.vy < 0 ? 7 : 15;
+      fl = [p.x - spread, p.y + 25]; fr = [p.x + spread, p.y + 25];
+    }
+    ctx.moveTo(p.x - 8, p.y + 12); ctx.lineTo(fl[0], fl[1]);
+    ctx.moveTo(p.x + 8, p.y + 12); ctx.lineTo(fr[0], fr[1]);
     ctx.stroke();
     if (sport === "volleyball") drawArms(p);
+    ctx.restore();
   }
 
   if (sport === "badminton") drawRacquet(p);
@@ -1514,7 +1965,7 @@ function drawBall() {
 
 // Study schedule: break the reading into short sessions.
 function drawCues() {
-  if (!gameStarted || gameOver) return;
+  if (!gameStarted || gameOver || !settings.cues) return;
   if (sport === "basketball") { drawHoopCues(); return; }
   const S = SPORTS[sport];
   let canSet = false, canSpike = false;
@@ -1692,12 +2143,13 @@ function drawPaused() {
 function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = "#ffd166"; ctx.font = "bold 48px Arial"; ctx.textAlign = "center";
-  ctx.fillText(score1 > score2 ? "BLUE WINS!" : "RED WINS!", WIDTH / 2, 250);
+  ctx.fillText((score1 > score2 ? teamName(0) : teamName(1)) + " WINS!", WIDTH / 2, 250);
 }
 
 // Past-paper style question for self-assessment.
 function draw() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  drawBackdrop();
   drawCourt();
   players.forEach(drawPlayer);
   drawBall();
@@ -1725,6 +2177,7 @@ function loop(t = 0) {
   draw();
   requestAnimationFrame(loop);
 }
+syncSound(); applyHints();
 requestAnimationFrame(loop);
 </script>
 </body>
