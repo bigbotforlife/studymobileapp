@@ -46,6 +46,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .brief-card ul { margin: 6px 0 12px 18px; padding: 0; }
 .brief-card li { margin-bottom: 6px; }
 .settings-btn { left: auto; right: 12px; }
+.faq-btn { left: auto; right: 84px; }
+#faqView { position: fixed; inset: 0; background: rgba(29,29,27,0.88); display: none; justify-content: center; align-items: center; z-index: 4000; }
+#faqView a { color: #c9501f; font-weight: 700; }
 .settings-hint { position: absolute; bottom: 52px; right: 12px; z-index: 2; background: #ffd166; color: #1d1d1b; border: 3px solid #1d1d1b; border-radius: 3px; box-shadow: 4px 4px 0 #c9501f; padding: 6px 10px; font-weight: 700; font-size: 14px; text-align: center; line-height: 1.25; animation: hintBob 1.6s ease-in-out infinite; }
 .settings-hint span { font-size: 11px; font-weight: 600; }
 @keyframes hintBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -111,6 +114,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <canvas id="menuBg"></canvas>
 <button class="legacy-btn" onclick="openLegacy()">Legacy</button>
 <button class="legacy-btn settings-btn" onclick="openSettings()">Settings</button>
+<button class="legacy-btn faq-btn" onclick="openFaq()">FAQ</button>
 <div class="settings-hint"><span>turn them on in Settings</span><br>Power-ups ▼</div>
 <div class="menu-content">
 <h1>Study Guide</h1>
@@ -199,6 +203,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <div class="set-tabs" id="setTabs"></div>
 <div id="setBody"></div>
 <button class="menu-button" onclick="closeSettings()">DONE</button>
+</div>
+</div>
+
+<div id="faqView">
+<div class="brief-card">
+<h1>FAQ</h1>
+<h2>Questions and feedback</h2>
+<div class="controls">
+<b>How do I contact the owner?</b><br>
+To report a bug, request a feature, or anything else, email: <a href="mailto:yash4best@gmail.com">yash4best@gmail.com</a>
+</div>
+<button class="menu-button" onclick="closeFaq()">DONE</button>
 </div>
 </div>
 
@@ -313,6 +329,9 @@ function openLegacy() {
   for (const k in keys) keys[k] = false;
   frame.focus();
 }
+function openFaq() { document.getElementById("faqView").style.display = "flex"; }
+function closeFaq() { document.getElementById("faqView").style.display = "none"; }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("faqView").style.display === "flex") { e.preventDefault(); e.stopImmediatePropagation(); closeFaq(); } }, true);
 function closeLegacy() {
   const frame = document.getElementById("legacyFrame");
   frame.srcdoc = "";
