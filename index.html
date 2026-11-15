@@ -318,6 +318,16 @@ To report a bug, request a feature, or anything else, email: <a href="mailto:yas
 // Study Guide - revision notes, flashcards and practice quizzes.
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+// Sharp rendering: the court is drawn at the real screen resolution (up to 2x) instead of being stretched from 900x500.
+let RS = 1;
+function updateRes() {
+  const w = canvas.clientWidth || WIDTH;
+  const n = Math.min(2, Math.max(1, Math.ceil((w * (window.devicePixelRatio || 1) / WIDTH) * 2) / 2));
+  if (n === RS && canvas.width === Math.round(WIDTH * RS)) return;
+  RS = n; canvas.width = Math.round(WIDTH * RS); canvas.height = Math.round(HEIGHT * RS);
+  for (const k in BACKDROP) delete BACKDROP[k];
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+}
 const scoreDisplay = document.getElementById("score");
 
 const WIDTH = 900, HEIGHT = 500, ground = 445, netX = 450;
@@ -633,6 +643,7 @@ const mctx = mbg.getContext("2d");
 function sizeMenuBg() { mbg.width = innerWidth; mbg.height = innerHeight; }
 sizeMenuBg();
 addEventListener("resize", sizeMenuBg);
+addEventListener("resize", () => updateRes());
 
 const mItems = [];
 for (let i = 0; i < 22; i++) {
@@ -2145,8 +2156,8 @@ function buildCrowd(sp) {
 // Study break: each fan is pre-drawn once as a tiny sprite, so a cheering crowd costs one drawImage per fan instead of several vector paths.
 function fanSprite(f, arms) {
   const r = f.r, ox = Math.ceil(r * 1.8) + 3, oy = Math.ceil(r * 1.5) + 3, c = document.createElement("canvas");
-  c.width = ox * 2; c.height = oy + Math.ceil(r * 3.6) + 3;
-  const g = c.getContext("2d");
+  c.width = Math.round(ox * 2 * RS); c.height = Math.round((oy + Math.ceil(r * 3.6) + 3) * RS);
+  const g = c.getContext("2d"); g.scale(RS, RS);
   if (arms) {
     g.strokeStyle = f.skin; g.lineWidth = 2.6; g.lineCap = "round";
     g.beginPath(); g.moveTo(ox - r, oy + r * 1.4); g.lineTo(ox - r * 1.7, oy - r * 1.5); g.moveTo(ox + r, oy + r * 1.4); g.lineTo(ox + r * 1.7, oy - r * 1.5); g.stroke();
@@ -2154,7 +2165,7 @@ function fanSprite(f, arms) {
   g.fillStyle = f.shirt; g.beginPath(); g.ellipse(ox, oy + r * 2.2, r * 1.5, r * 1.35, 0, Math.PI, 0); g.fill();
   g.fillStyle = f.skin; g.beginPath(); g.arc(ox, oy, r, 0, Math.PI * 2); g.fill();
   g.fillStyle = f.hair; g.beginPath(); g.arc(ox, oy - r * 0.1, r * 1.02, Math.PI, 0); g.fill();
-  return { c, ox, oy };
+  return { c, ox, oy, w: c.width / RS, h: c.height / RS, rs: RS };
 }
 function drawCrowd(sp) {
   if (!CROWD[sp]) CROWD[sp] = buildCrowd(sp);
@@ -2165,13 +2176,15 @@ function drawCrowd(sp) {
       const wave = Math.max(0, Math.sin(t * 1.1 - f.x / 120) - 0.75) * 5;
       const up = cheer ? Math.abs(Math.sin(t * 8 + f.ph)) * 6 : Math.sin(t * 1.8 + f.ph) * 0.7 + wave;
       const useArms = cheer && f.arms;
+      if (f.spA && f.spA.rs !== RS) f.spA = null;
+      if (f.spN && f.spN.rs !== RS) f.spN = null;
       const sp2 = useArms ? (f.spA || (f.spA = fanSprite(f, true))) : (f.spN || (f.spN = fanSprite(f, false)));
-      ctx.drawImage(sp2.c, Math.round(f.x - sp2.ox), Math.round(row.y - up - sp2.oy));
+      ctx.drawImage(sp2.c, Math.round(f.x - sp2.ox), Math.round(row.y - up - sp2.oy), sp2.w, sp2.h);
     });
   });
 }
 const BACKDROP = {};
-function layer() { const c = document.createElement("canvas"); c.width = WIDTH; c.height = HEIGHT; return [c, c.getContext("2d")]; }
+function layer() { const c = document.createElement("canvas"); c.width = Math.round(WIDTH * RS); c.height = Math.round(HEIGHT * RS); const g = c.getContext("2d"); g.scale(RS, RS); return [c, g]; }
 function buildBackdrop(sp) {
   const [bc, g] = layer(), [fc, f] = layer(), rnd = seeded(31 + sp.length);
   const lin = (c, x0, y0, x1, y1, stops) => { const k = c.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, col]) => k.addColorStop(o, col)); return k; };
@@ -2231,9 +2244,9 @@ function buildBackdrop(sp) {
 }
 function drawBackdrop() {
   if (!BACKDROP[sport]) BACKDROP[sport] = buildBackdrop(sport);
-  ctx.drawImage(BACKDROP[sport].back, 0, 0);
+  ctx.drawImage(BACKDROP[sport].back, 0, 0, WIDTH, HEIGHT);
   if (settings.crowd) drawCrowd(sport);
-  ctx.drawImage(BACKDROP[sport].front, 0, 0);
+  ctx.drawImage(BACKDROP[sport].front, 0, 0, WIDTH, HEIGHT);
 }
 
 // Group study: compare answers with classmates.
@@ -2804,6 +2817,7 @@ function drawGameOver() {
 
 // Past-paper style question for self-assessment.
 function draw() {
+  ctx.setTransform(RS, 0, 0, RS, 0, 0);
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
   const left = shakeUntil - performance.now(), shaking = left > 0 && !paused && settings.shake;
   if (shaking) { const k = Math.min(1, left / 380) * shakeMag; ctx.save(); ctx.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k); }
@@ -3309,7 +3323,9 @@ function stepSim(t) {
   netPump();
 }
 // In a room the match is driven by a background timer, so a hidden or unfocused tab never stalls the game for everyone else.
+let frameNo = 0;
 function loop(t = 0) {
+  if ((frameNo++ & 15) === 0) updateRes();
   if (!(net && net.worker)) stepSim(t);
   draw();
   requestAnimationFrame(loop);
@@ -3507,7 +3523,11 @@ function netDcSend(ch, o) {
   try { ch.send(typeof o === "string" ? o : JSON.stringify(o, NET_REPL)); return true; } catch (e) { return false; }
 }
 function netToGuest(slot, o) { const e = net.dc[slot]; if (!(e && netDcSend(e.u, o))) netRelay(o, slot); }
-function netGuestSend(o) { if (!netDcSend(net.dcu, o)) netRelay(o); }
+// If the host stops confirming inputs on the direct link (a one-way or lossy connection), the same input is also sent through the room server.
+function netGuestSend(o) {
+  const ok = netDcSend(net.dcu, o);
+  if (!ok || (o.k === "in" && net.inSeq - (net.ack || 0) > 45)) netRelay(o);
+}
 function netP2PHost(slot) {
   if (typeof RTCPeerConnection === "undefined" || net.pc[slot]) return;
   try {
@@ -3699,7 +3719,7 @@ function netSnap() {
     dk: dunkShot, dp: dunkPop, shk2: shockFx, tr: ballTrail.map(t => ({ x: netR(t.x), y: netR(t.y) })), pu,
     tc: touches, lh: lastHitSide, sip: serveInProgress, sht: serveHit, ss: servingSide, sm: smashStreak, so: streakOwner,
     nt: notice ? { text: notice.text, left: Math.max(0, Math.round(notice.until - now)) } : null,
-    shk: Math.max(0, Math.round(shakeUntil - now)), shm: shakeMag, st: stats, ra: rally, lr: longestRally };
+    shk: Math.max(0, Math.round(shakeUntil - now)), shm: shakeMag, st: stats, ra: rally, lr: longestRally, ia: Object.keys(net.rin).reduce((m, k) => { m[k] = net.rin[k].q; return m; }, {}) };
 }
 function netPump() {
   if (!net || net.role !== "host" || !net.started) return;
@@ -3725,6 +3745,7 @@ function netEv(list) {
 }
 function netApply(s) {
   if (!net || net.role !== "guest" || !net.started || !players.length) return;
+  if (s.ia) net.ack = s.ia[net.pi] || 0;
   net.go = s.go; matchTicks = s.tk; score1 = s.s1; score2 = s.s2; updateScore();
   s.P.forEach((o, i) => {
     const p = players[i]; if (!p) return;
@@ -3754,7 +3775,8 @@ function netGuestStep() {
   if (n.jump) c.j++; if (n.slide) c.s++; if (n.set) c.e++; if (n.spike) c.p++;
   const key = [+n.left, +n.right, +n.setHeld, +n.spikeHeld, c.j, c.s, c.e, c.p].join("");
   if (key !== net.lastIn) { net.lastIn = key; net.burst = 4; }
-  if (net.burst > 0 || ++net.inTick >= 30) {
+  const active = n.left || n.right || n.setHeld || n.spikeHeld;
+  if (net.burst > 0 || ++net.inTick >= (active ? 3 : 20)) {
     if (net.burst > 0) net.burst--;
     net.inTick = 0;
     netGuestSend({ k: "in", q: ++net.inSeq, l: +n.left, r: +n.right, sh: +n.setHeld, kh: +n.spikeHeld, cj: c.j, cs: c.s, ce: c.e, cp: c.p });
