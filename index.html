@@ -111,6 +111,50 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 #lobbyPub { padding: 10px; font-size: 15px; }
 #lobbyPub.on { background: #ffd166; }
 .menu-button:disabled { opacity: 0.55; cursor: default; }
+
+/* ---- Fresh look: full-screen court, rounded panels, softer buttons ---- */
+button { border-radius: 10px; background: linear-gradient(#ffdc82, #f2b134); box-shadow: 0 4px 0 #1d1d1b; letter-spacing: 0.5px; transition: transform .08s, background .15s, box-shadow .08s; }
+button:hover { background: linear-gradient(#ffe6a0, #f7c24e); transform: translateY(-1px); }
+button:active { transform: translateY(3px); box-shadow: 0 1px 0 #1d1d1b; }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 #1d1d1b; }
+.menu-content, .brief-card { border-radius: 18px; background: linear-gradient(#fcf7e8, #f1e7cb); box-shadow: 0 10px 0 #c9501f, 0 26px 60px rgba(0,0,0,0.45); }
+.menu-content h1::after, .brief-card h1::after { content: ""; display: block; width: 64px; height: 5px; background: #c9501f; margin: 10px auto 0; border-radius: 3px; }
+.menu-button { border-radius: 12px; }
+.back-button { background: linear-gradient(#eee2c3, #dccda8); }
+.back-button:hover { background: linear-gradient(#f4eacf, #e6d9b8); }
+.legacy-btn { border-radius: 8px; box-shadow: 0 2px 0 #1d1d1b; }
+.set-tabs button { border-radius: 8px; box-shadow: 0 2px 0 #1d1d1b; }
+#gameArea { position: fixed; inset: 0; z-index: 1500; align-items: center; justify-content: center; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #1d2b47, #070b14 78%); }
+#stage { position: relative; width: min(100vw, calc(100vh * 1.8)); aspect-ratio: 9 / 5; }
+#stage #game { width: 100%; height: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: 0 0 70px rgba(0,0,0,0.65); }
+#gearBtn { position: absolute; top: 10px; right: 10px; margin: 0; padding: 8px 14px; font-size: 14px; color: #ffffff; background: rgba(14,20,34,0.82); border: 2px solid rgba(255,255,255,0.4); box-shadow: none; z-index: 5; }
+#gearBtn:hover { background: rgba(40,52,82,0.92); transform: none; }
+#gearBtn:active { transform: translateY(1px); box-shadow: none; }
+#gearBtn span { display: inline-block; font-size: 17px; margin-right: 4px; vertical-align: -1px; }
+#gamePanel { position: fixed; inset: 0; background: rgba(8,12,22,0.72); z-index: 3100; justify-content: center; align-items: center; }
+.gp-card { max-width: 440px; text-align: center; }
+.gp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.gp-grid button { margin: 0; padding: 14px 8px; font-size: 15px; width: 100%; }
+.gp-card .menu-button { margin: 10px 0; }
+.gp-card .controls { text-align: left; font-size: 13.5px; margin: 14px 4px 0; line-height: 1.6; border-top: 2px dashed #cdbf9d; padding-top: 12px; }
+
+.tour-btn { background: linear-gradient(#ffe9a8, #f2a93a); }
+.tour-btn small { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; margin-top: 2px; }
+.tour-box { background: #efe3c2; border: 2px solid #1d1d1b; border-radius: 10px; padding: 8px 12px; margin: 6px 0 14px; font-size: 14px; text-align: center; color: #3a362e; }
+.tour-box b { display: block; font-size: 17px; color: #a3401f; margin-bottom: 4px; }
+.gp-info { text-align: center; margin: 4px 0 10px; }
+.chip { display: inline-block; background: #1d1d1b; color: #ffd166; border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 700; margin: 2px 3px; letter-spacing: 0.5px; }
+.gp-score { font-family: Impact, "Arial Black", sans-serif; font-size: 40px; letter-spacing: 3px; line-height: 1.1; margin-top: 4px; }
+.gp-score i { font-style: normal; color: #6b6556; margin: 0 8px; }
+.gp-time { font-size: 12px; color: #6b6556; }
+.gp-vol { display: flex; align-items: center; gap: 10px; background: #efe3c2; border: 2px solid #1d1d1b; border-radius: 12px; padding: 8px 10px; margin: 4px 0 10px; }
+.gp-vol span { font-weight: 700; font-size: 14px; }
+.gp-vol input { flex: 1; accent-color: #c9501f; }
+.gp-vol button { margin: 0; padding: 7px 10px; font-size: 12px; }
+.gp-ctl { margin-top: 10px; border-top: 2px dashed #cdbf9d; padding-top: 8px; }
+.gp-ctl summary { cursor: pointer; font-weight: 700; color: #c9501f; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; }
+.gp-card .gp-ctl .controls { border-top: 0; padding-top: 0; margin-top: 8px; }
+#resumeBtn::before { content: "\25B6  "; } #restartBtn::before { content: "\21BB  "; } #helpBtn::before { content: "?  "; } #soundBtn::before { content: "\266A  "; } #setBtn::before { content: "\2699  "; } #menuBtn::before { content: "\2302  "; }
 </style>
 </head>
 <body>
@@ -152,6 +196,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <button class="menu-button" onclick="hostOrLocalStart('volleyball')">Volleyball</button>
 <button class="menu-button" onclick="hostOrLocalStart('badminton')">Badminton</button>
 <button class="menu-button" onclick="hostOrLocalStart('basketball')">Basketball</button>
+<button class="menu-button tour-btn" onclick="hostOrLocalStart('tournament')">&#127942; Tournament <small>best of 3 · all sports</small></button>
 <button class="menu-button back-button" onclick="backFromSport()">← BACK</button>
 </div>
 
@@ -183,6 +228,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <div id="lobbyHost">
 <div class="pick-row"><button id="m1" class="menu-button" onclick="netSetMode(1)">1 VS 1</button><button id="m2" class="menu-button" onclick="netSetMode(2)">2 VS 2</button></div>
 <div class="pick-row"><button id="sp_volleyball" class="menu-button" onclick="netSetSport('volleyball')">Volleyball</button><button id="sp_badminton" class="menu-button" onclick="netSetSport('badminton')">Badminton</button><button id="sp_basketball" class="menu-button" onclick="netSetSport('basketball')">Basketball</button></div>
+<div class="pick-row"><button id="sp_tournament" class="menu-button" onclick="netSetSport('tournament')">&#127942; Tournament (best of 3)</button></div>
 <button id="lobbyPub" class="menu-button" onclick="netTogglePub()">ROOM: PRIVATE</button>
 <button id="lobbyStart" class="menu-button" onclick="netStart()">START MATCH</button>
 </div>
@@ -194,15 +240,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 </div>
 
 <div id="gameArea">
-<h1 id="gameTitle">Study Guide</h1>
-<div id="score">0 - 0</div>
+<div id="stage">
 <canvas id="game" width="900" height="500"></canvas>
-<button id="restartBtn" onclick="restart()">RESTART GAME</button>
-<button id="menuBtn" onclick="backToMenu()">MAIN MENU</button>
-<button id="helpBtn" onclick="openBriefing()">HOW TO PLAY</button>
-<button id="soundBtn" onclick="toggleSound(); this.blur()">SOUND: ON</button>
+<button id="gearBtn" onclick="this.blur(); openGamePanel()" title="Menu"><span>&#9881;</span> MENU</button>
+</div>
+<div id="score" style="display:none">0 - 0</div>
+</div>
+
+<div id="gamePanel" style="display:none">
+<div class="brief-card gp-card">
+<h1>Study Guide</h1>
+<h2>Game menu</h2>
+<div class="gp-info" id="gpInfo"></div>
+<button class="menu-button" id="resumeBtn" onclick="closeGamePanel()">RESUME</button>
+<div class="gp-grid">
+<button id="restartBtn" onclick="closeGamePanel(true); restart()">RESTART GAME</button>
+<button id="helpBtn" onclick="closeGamePanel(); openBriefing()">HOW TO PLAY</button>
+<button id="soundBtn" onclick="toggleSound(); this.blur(); gpSync()">SOUND: ON</button>
 <button id="setBtn" onclick="this.blur(); openSettings()">SETTINGS</button>
-<div class="controls" id="controlsDisplay"></div>
+</div>
+<div class="gp-vol"><span>Volume</span><input type="range" id="gpVol" min="0" max="100" oninput="setVol('master', +this.value)"><button id="gpMusic" onclick="toggleOpt('musicOn'); this.blur(); gpSync()">MUSIC: ON</button></div>
+<button class="menu-button back-button" id="menuBtn" onclick="closeGamePanel(true); backToMenu()">MAIN MENU</button>
+<details class="gp-ctl" open><summary>Controls</summary><div class="controls" id="controlsDisplay"></div></details>
+</div>
 </div>
 
 <div id="statsView" style="display:none">
@@ -537,7 +597,7 @@ function createPlayer(x, side, color, map) {
     x, y: ground - 60, vx: 0, vy: 0, color, map, in: newInput(), isBot: false,
     side, radius: 25, slideTimer: 0, setCooldown: 0, spikeCooldown: 0,
     effect: "", effectTimer: 0, charge: 0, charging: false,
-    immune: 0, dribCD: 0, stealCD: 0, noPick: 0, dribT: 0, catchCD: 0, stun: 0, shoveCD: 0
+    immune: 0, dribFast: 0, dribCD: 0, stealCD: 0, noPick: 0, dribT: 0, catchCD: 0, stun: 0, shoveCD: 0
   };
 }
 
@@ -663,7 +723,8 @@ function backFromSport() {
 }
 // Mnemonic to help remember this section.
 function hostOrLocalStart(s) {
-  startGame(pendingMode, s);
+  if (s === "tournament") { tour = newTour(); startGame(pendingMode, TOUR[0]); }
+  else { tour = null; startGame(pendingMode, s); }
 }
 
 // Past-paper style question for self-assessment.
@@ -671,10 +732,9 @@ function setupGameScreen(mode, s) {
   gameMode = mode;
   sport = s || "volleyball";
   netTop = SPORTS[sport].netTop;
-  document.getElementById("gameTitle").textContent = TITLES[sport];
   canvas.style.background = THEMES[sport].bg;
   document.getElementById("menu").style.display = "none";
-  document.getElementById("gameArea").style.display = "block";
+  document.getElementById("gameArea").style.display = "flex"; closeGamePanel(true);
   score1 = 0; score2 = 0; gameOver = false; particles = []; lastHitSide = -1;
   resetStats(); hideStats();
   createPlayers(); dust = [];
@@ -755,7 +815,50 @@ function setPaused(v) {
   paused = v;
   for (const k in keys) keys[k] = false;
 }
-function togglePause() { if (gameStarted && !briefingOpen && !gameOver) setPaused(!paused); }
+// Tournament: volleyball, badminton and basketball back to back; whoever wins two of the three takes the series.
+const TOUR = ["volleyball", "badminton", "basketball"];
+const SPORT_NAMES = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball", tournament: "Tournament (best of 3)" };
+let tour = null;
+function newTour() { return { i: 0, w: [0, 0], res: [], rec: false }; }
+function tourRecord() {
+  if (!tour || tour.rec) return;
+  tour.rec = true;
+  const win = score1 > score2 ? 0 : 1;
+  tour.w[win]++; tour.res.push({ sp: sport, a: score1, b: score2, win });
+}
+function tourAdvance() {
+  if (tour.i < TOUR.length - 1) tour.i++; else tour = newTour();
+  tour.rec = false;
+  if (net) netBegin(TOUR[tour.i]); else startGame(gameMode, TOUR[tour.i]);
+}
+function tourHud() { return tour ? "GAME " + (tour.i + 1) + " OF 3  ·  SERIES " + tour.w[0] + "-" + tour.w[1] + "  ·  " : ""; }
+let gamePanelOpen = false, panelPaused = false;
+function openGamePanel() {
+  if (gamePanelOpen || !gameStarted) return;
+  gamePanelOpen = true; panelPaused = !paused && !net && !briefingOpen && !gameOver;
+  if (panelPaused) setPaused(true);
+  gpSync();
+  document.getElementById("gamePanel").style.display = "flex";
+}
+function gpSync() {
+  const el = id => document.getElementById(id);
+  el("gpVol").value = Math.round(settings.master * 100);
+  el("gpMusic").textContent = "MUSIC: " + (settings.musicOn ? "ON" : "OFF");
+  const modeTxt = net ? "Online " + (gameMode === 2 ? "2v2" : "1v1") : (gameMode === 2 ? "2 vs 2" : (bot ? "vs Bot (" + bot.level + ")" : "1 vs 1"));
+  el("gpInfo").innerHTML = '<span class="chip">' + SPORT_NAMES[sport] + '</span><span class="chip">' + modeTxt + '</span>' +
+    (tour ? '<span class="chip">Game ' + (tour.i + 1) + ' of 3 · Series ' + tour.w[0] + '-' + tour.w[1] + '</span>' : '') +
+    '<div class="gp-score"><b style="color:' + cols()[0] + '">' + score1 + '</b><i>:</i><b style="color:' + cols()[2] + '">' + score2 + '</b></div><div class="gp-time">Match time ' + fmtTime(matchTicks) + '</div>';
+}
+function closeGamePanel(noResume) {
+  if (!gamePanelOpen) return;
+  gamePanelOpen = false; document.getElementById("gamePanel").style.display = "none";
+  if (panelPaused && !noResume) setPaused(false);
+  panelPaused = false;
+}
+function togglePause() {
+  if (!gameStarted || briefingOpen || gameOver) return;
+  if (gamePanelOpen) closeGamePanel(); else if (paused) setPaused(false); else openGamePanel();
+}
 function puTip() {
   if (gameMode === 2 && sport === "basketball") return "<b>Power-ups:</b> about every 15 seconds of play a mystery box appears. Touch it to roll one of three, all for the player who touched it: <b>Meteor Jump</b> (your next jump is huge and you move faster in the air until you land), <b>Vanish Drive</b> (your next dribble teleports you well forward) or <b>Flopper</b> (your next shove knocks back every opponent near you, on either side, but never your teammate). Each is used once.";
   if (gameMode === 2) return sport === "volleyball"
@@ -949,6 +1052,8 @@ function botControl() {
 
 // Practice questions - attempt before reading the solution.
 function backToMenu() {
+  tour = null;
+  closeGamePanel(true);
   netLeave();
   gameStarted = false;
   hideStats();
@@ -974,6 +1079,7 @@ function restartBall(scoringSide) {
 // Revision tip: repeat difficult topics at spaced intervals.
 function restart() {
   if (net && net.role === "guest") return;
+  if (tour && gameOver) { tourAdvance(); return; }
   if (net) netRelay({ k: "rematch" });
   puReset(); score1 = 0; score2 = 0; gameOver = false; particles = [];
   resetStats(); hideStats();
@@ -1163,7 +1269,27 @@ function musicStop() {
   const o = MUSIC.out; MUSIC.out = null;
   try { o.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); setTimeout(() => { try { o.disconnect(); } catch (e) {} }, 600); } catch (e) {}
 }
-["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { if (soundOn && settings.musicOn) musicStart(); }));
+// Music starts the moment the page opens. Browsers only let audio run after a first click or key press, so the track is queued now and wakes up on the very first interaction of any kind.
+function wakeAudio() {
+  if (!soundOn) return;
+  if (settings.musicOn) musicStart();
+  try { if (audioCtx && audioCtx.state !== "running") audioCtx.resume(); } catch (e) {}
+}
+["pointerdown", "pointerup", "mousedown", "keydown", "touchstart", "touchend", "click"].forEach(ev => document.addEventListener(ev, wakeAudio, true));
+window.addEventListener("focus", wakeAudio);
+window.addEventListener("pageshow", wakeAudio);
+wakeAudio();
+// Soft interface sounds: a tiny tick on hover and a short click on press (not recorded for online play).
+let lastHoverAt = 0;
+function uiTick() { tone(1250, 0.03, "sine", 0.05); }
+function uiClick() { tone(560, 0.06, "triangle", 0.12, 420); }
+document.addEventListener("mouseover", e => {
+  const b = e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
+  if (e.relatedTarget && b.contains(e.relatedTarget)) return;
+  const t = performance.now(); if (t - lastHoverAt < 70) return; lastHoverAt = t; uiTick();
+});
+document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("button"); if (b && !b.disabled) uiClick(); }, true);
+document.addEventListener("click", e => { if (e.detail === 0) { const b = e.target.closest && e.target.closest("button"); if (b && !b.disabled) uiClick(); } }, true);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && MUSIC.timer) musicTick(); });
 
 
@@ -1177,7 +1303,12 @@ function resetStats() { stats = [newSide(), newSide()]; rally = 0; longestRally 
 function fmtTime(ticks) { const sec = Math.floor(ticks / 60); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
 function showStats() {
   const S = SPORTS[sport];
-  document.getElementById("statsTitle").textContent = (score1 > score2 ? teamName(0) : teamName(1)) + (gameMode === 2 ? " TEAM" : "") + " WINS!";
+  tourRecord();
+  const gameWinner = (score1 > score2 ? teamName(0) : teamName(1)) + (gameMode === 2 ? " TEAM" : "");
+  let title = gameWinner + " WINS!";
+  if (tour && tour.i >= TOUR.length - 1) title = (tour.w[0] > tour.w[1] ? teamName(0) : teamName(1)) + (gameMode === 2 ? " TEAM" : "") + " WINS THE TOURNAMENT " + Math.max(tour.w[0], tour.w[1]) + "-" + Math.min(tour.w[0], tour.w[1]) + "!";
+  else if (tour) title = "GAME " + (tour.i + 1) + ": " + title;
+  document.getElementById("statsTitle").textContent = title;
   const rows = [["Points", "points"], ["Aces", "aces"], ["Total hits", "hits"], ["Attacks (" + S.spikeName.toLowerCase() + "s)", "attacks"], [S.setName.charAt(0) + S.setName.slice(1).toLowerCase() + " shots", "sets"]];
   if (sport === "badminton") { rows.push(["Drop shots", "drops"]); rows.push(["Best smash streak", "bestStreak"]); }
   if (sport === "basketball") { rows.length = 0; rows.push(["Points", "points"], ["Shots made", "made"], ["Shots taken", "shots"], ["3-pointers made", "threes"], ["Steals", "steals"], ["Blocks", "blocks"], ["Shoves landed", "shoves"]); }
@@ -1191,14 +1322,20 @@ function showStats() {
   });
   html += "</table>";
   html += '<div class="stat-note">' + (sport === "basketball" ? "" : "Longest rally: <b>" + longestRally + " hits</b> &nbsp;·&nbsp; ") + "Match time: <b>" + fmtTime(matchTicks) + "</b></div>";
+  if (tour) {
+    html += '<div class="tour-box"><b>Series ' + tour.w[0] + " - " + tour.w[1] + "</b>";
+    tour.res.forEach((r, i) => { html += "<div>Game " + (i + 1) + " · " + SPORT_NAMES[r.sp] + " · " + r.a + "-" + r.b + " · " + cap(teamName(r.win)) + "</div>"; });
+    html += "</div>";
+  }
   document.getElementById("statsBody").innerHTML = html;
-  document.getElementById("statsAgain").textContent = net && net.role === "guest" ? "WAITING FOR HOST..." : "PLAY AGAIN";
+  document.getElementById("statsAgain").textContent = net && net.role === "guest" ? "WAITING FOR HOST..." : (tour ? (tour.i < TOUR.length - 1 ? "NEXT GAME: " + SPORT_NAMES[TOUR[tour.i + 1]].toUpperCase() : "NEW TOURNAMENT") : "PLAY AGAIN");
   document.getElementById("statsLobby").style.display = net && net.role === "host" ? "block" : "none";
+  closeGamePanel(true);
   document.getElementById("statsView").style.display = "flex";
   statsOpen = true;
   for (const k in keys) keys[k] = false;
 }
-function hideStats() { document.getElementById("statsView").style.display = "none"; statsOpen = false; }
+function hideStats() { closeGamePanel(true); document.getElementById("statsView").style.display = "none"; statsOpen = false; }
 
 // Flashcards: quiz yourself, then check the answer.
 function registerHit(p, isSmash = false, counts = true) {
@@ -1275,7 +1412,7 @@ function bbSetup(side) {
   players.forEach((p, i) => {
     p.x = gameMode === 1 ? (p.side === 0 ? 180 : 720) : [150, 300, 600, 750][i];
     p.y = ground - 60; p.vx = 0; p.vy = 0; p.slideTimer = 0;
-    p.charging = false; p.charge = 0; p.immune = 0; p.dribCD = 0; p.stealCD = 0; p.noPick = 0; p.catchCD = 0; p.stun = 0; p.shoveCD = 0; p.wm = null; shockFx = []; dunkShot = false; dunkPop = null;
+    p.charging = false; p.charge = 0; p.immune = 0; p.dribFast = 0; p.dribCD = 0; p.stealCD = 0; p.noPick = 0; p.catchCD = 0; p.stun = 0; p.shoveCD = 0; p.wm = null; shockFx = []; dunkShot = false; dunkPop = null;
   });
   const i = players.findIndex(p => p.side === side);
   holder = i; shotBy = -1; shotLive = false; scoreWait = 0; shotAge = 0; ballTrail = [];
@@ -1361,7 +1498,7 @@ function shootBall(p, power, noWindmill) {
 }
 function dribble(p) {
   if (p.dribCD > 0) return;
-  p.immune = 60; p.dribCD = 120;
+  p.immune = 60; p.dribFast = 60; p.dribCD = 120;
   const dv = pu && pu.fx.drive && players.indexOf(p) === pu.fx.drive.who && puEnabled() ? pu.fx.drive : null;
   if (dv) {
     const dir = releasePoint(p).dir, from = { x: p.x, y: p.y };
@@ -1429,7 +1566,7 @@ function releaseDunk(p, i) {
 }
 function hoopActions(p) {
   const n = p.in, i = players.indexOf(p);
-  p.immune = Math.max(0, p.immune - 1);
+  p.immune = Math.max(0, p.immune - 1); p.dribFast = Math.max(0, (p.dribFast || 0) - 1);
   p.dribCD = Math.max(0, p.dribCD - 1);
   p.stealCD = Math.max(0, p.stealCD - 1);
   p.noPick = Math.max(0, p.noPick - 1);
@@ -1548,7 +1685,7 @@ function updateBasketball() {
       ball.x = Math.max(hoops[0].bx + 16, Math.min(hoops[1].bx - 16, h.x + wd * Math.sin(a) * 34)); ball.y = h.y - 22 - Math.cos(a) * 34; ball.vx = 0; ball.vy = 0; ballTrail = [];
       return;
     }
-    h.dribT = (h.dribT || 0) + (h.immune > 0 ? 0.5 : 0.28);
+    h.dribT = (h.dribT || 0) + (h.dribFast > 0 ? 0.62 : 0.065);   // lazy bounce while holding (also on spawn and pick-up), fast bounce only right after the dribble button
     const handY = h.y + 8, air = h.y < ground - 62;
     const phase = Math.abs(Math.sin(h.dribT));
     ball.x = Math.max(hoops[0].bx + 16, Math.min(hoops[1].bx - 16, h.x + dir * 24));
@@ -1694,7 +1831,13 @@ function planSpike(dir, cands, lo, hi) {
     if (gap < bestGap) { bestGap = gap; best = { vx: dir * c[0], vy: r.vy }; }
     if (gap === 0) break;
   }
-  return best || { vx: dir * 9, vy: clearNetVy(9, 11, 8, 0.125) };
+  if (best) return best;
+  // Nothing in the list clears the net (the ball is right at the net): take the fastest shot that still goes over and lands in.
+  for (const sp of [9, 8, 7, 6, 5, 4, 3, 2.5, 2, 1.5, 1, 0.6]) {
+    const r = spikeVy(dir * sp, 14);
+    if (r) return { vx: dir * sp, vy: r.vy };
+  }
+  return { vx: dir * 2, vy: clearNetVy(2, -4, 8, 0.125) };
 }
 
 // Drop shot planner: find a gentle arc that just clears the net and lands close behind it.
@@ -1765,7 +1908,7 @@ function spikeBall(p, power = 1) {
     if (touchFault(p)) return;
     const toward = p.isBot ? p.in.style === "cut" : (p.side === 0 ? p.in.right : p.in.left);
     const away = p.isBot ? p.in.style === "deep" : (p.side === 0 ? p.in.left : p.in.right);
-    if (toward) { const r = planSpike(dir, [[3, 14], [4, 14], [5, 14], [6, 14], [7, 14], [8.5, 14]], 20, 90); vx = r.vx; vy = r.vy; label = "CUT"; }
+    if (toward) { const r = planSpike(dir, [[3, 14], [4, 14], [5, 14], [6, 14], [7, 14], [8.5, 14], [2, 14], [1.2, 14]], 20, 90); vx = r.vx; vy = r.vy; label = "CUT"; }
     else if (away) { const r = planSpike(dir, [[13.5, 4], [13.5, 7], [12, 7], [12, 9], [10.5, 9], [10.5, 11], [9, 11]], 250, 400); vx = r.vx; vy = r.vy; label = "DEEP"; }
     else { const r = planSpike(dir, [[9, 11], [8, 11], [10, 11], [7, 11], [12, 11]], 100, 280); vx = r.vx; vy = r.vy; label = "SPIKE"; }
   } else {
@@ -2102,9 +2245,11 @@ function drawParticles() {
   });
   ctx.globalAlpha = 1;
   particles.forEach(p => {
-    ctx.globalAlpha = Math.max(0, p.life / 30);
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+    const k = Math.max(0, p.life / 30);
+    ctx.globalAlpha = k * 0.45; ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4 + 4 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = k; ctx.beginPath(); ctx.arc(p.x, p.y, 2.5 + 2 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(p.x, p.y, 1.2 * k + 0.4, 0, Math.PI * 2); ctx.fill();
   });
   ctx.globalAlpha = 1;
 }
@@ -2113,18 +2258,40 @@ function drawParticles() {
 function drawCourt() {
   ctx.fillStyle = THEMES[sport].floor;
   ctx.fillRect(0, ground, WIDTH, 55);
+  const fg = ctx.createLinearGradient(0, ground, 0, ground + 55);
+  fg.addColorStop(0, "rgba(255,255,255,0.22)"); fg.addColorStop(0.25, "rgba(255,255,255,0)"); fg.addColorStop(1, "rgba(0,0,0,0.24)");
+  ctx.fillStyle = fg; ctx.fillRect(0, ground, WIDTH, 55);
   ctx.strokeStyle = "white"; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(0, ground); ctx.lineTo(WIDTH, ground); ctx.stroke();
   if (sport === "basketball") { drawHoops(); return; }
 
   const h = ground - netTop;
-  ctx.fillStyle = "#333"; ctx.fillRect(netX - 7, netTop - 8, 14, h + 8);
-  ctx.fillStyle = "#e9e9e9"; ctx.fillRect(netX - 5, netTop, 10, h);
-  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
-  for (let y = netTop + 8; y < ground; y += 12) { ctx.beginPath(); ctx.moveTo(netX - 17, y); ctx.lineTo(netX + 17, y); ctx.stroke(); }
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(netX - 17, netTop, 34, 5);
+  // Net: soft mesh on both sides of a steel post with a padded, striped top tape.
+  const sway = Math.sin(performance.now() / 700) * 0.8;
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(netX, ground + 3, 24, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.fillRect(netX - 17, netTop + 5, 34, h - 5);
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let y = netTop + 9; y < ground; y += 9) { ctx.moveTo(netX - 17, y + sway); ctx.lineTo(netX + 17, y + sway); }
+  for (let x = netX - 17; x <= netX + 17; x += 6) { ctx.moveTo(x, netTop + 5); ctx.lineTo(x + sway, ground); }
+  ctx.stroke();
+  const pg = ctx.createLinearGradient(netX - 6, 0, netX + 6, 0); pg.addColorStop(0, "#6d7580"); pg.addColorStop(0.4, "#f3f5f7"); pg.addColorStop(1, "#555d68");
+  ctx.fillStyle = pg; ctx.fillRect(netX - 5, netTop - 6, 10, h + 6);
+  ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.5; ctx.strokeRect(netX - 5, netTop - 6, 10, h + 6);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(netX - 18, netTop, 36, 7);
+  ctx.fillStyle = sport === "volleyball" ? "#e8382a" : "#2f7dff"; ctx.fillRect(netX - 18, netTop + 2, 36, 3);
+  ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.5; ctx.strokeRect(netX - 18, netTop, 36, 7);
+  ctx.fillStyle = "#e8382a"; ctx.fillRect(netX - 5, ground - 26, 10, 26); ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(netX - 5, ground - 26, 3, 26);
+  ctx.fillStyle = "#1d1d1b"; ctx.beginPath(); ctx.arc(netX, netTop - 7, 4.5, 0, Math.PI * 2); ctx.fill();
 }
 
+// Colour helpers for shading the players and balls.
+function mixc(c, t, a) {
+  if (!/^#[0-9a-f]{6}$/i.test(c) || !/^#[0-9a-f]{6}$/i.test(t)) return c;
+  const x = parseInt(c.slice(1), 16), y = parseInt(t.slice(1), 16), m = k => Math.round(((x >> k) & 255) * (1 - a) + ((y >> k) & 255) * a);
+  return "rgb(" + m(16) + "," + m(8) + "," + m(0) + ")";
+}
+const SKIN_TONE = "#f1c9a5";
 // Flashcards: quiz yourself, then check the answer.
 function drawArms(p) {
   const d = p.side === 0 ? 1 : -1, kind = (p.effect || "").split(" ")[0], t = p.effectTimer / 30;
@@ -2134,13 +2301,14 @@ function drawArms(p) {
   else if (p.effectTimer > 0 && kind === "SPIKE") {
     const a = -2.3 + (1 - t) * 2.7;
     hands = [[sx + d * Math.cos(a) * 42, sy + Math.sin(a) * 42], [sx - d * 12, sy + 16]];
-  } else hands = [[sx - 17, sy + 18], [sx + 17, sy + 18]];
-  ctx.strokeStyle = p.color; ctx.lineWidth = 7; ctx.lineCap = "round";
-  hands.forEach((h, i) => {
-    ctx.beginPath(); ctx.moveTo(sx + (i === 0 ? -9 : 9), sy + 2); ctx.lineTo(h[0], h[1]); ctx.stroke();
+  } else hands = [[sx - 29, sy + 14], [sx + 29, sy + 14]];
+  ctx.lineCap = "round";
+  [["#1d1d1b", 10], [p.color, 6.5]].forEach(([col, w]) => {
+    ctx.strokeStyle = col; ctx.lineWidth = w;
+    hands.forEach((h, i) => { ctx.beginPath(); ctx.moveTo(sx + (i === 0 ? -9 : 9), sy + 2); ctx.lineTo(h[0], h[1]); ctx.stroke(); });
   });
-  ctx.fillStyle = "#fff";
-  hands.forEach(h => { ctx.beginPath(); ctx.arc(h[0], h[1], 4, 0, Math.PI * 2); ctx.fill(); });
+  ctx.fillStyle = SKIN_TONE; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.8;
+  hands.forEach(h => { ctx.beginPath(); ctx.arc(h[0], h[1], 4.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
 }
 
 // Summary of this topic for exam revision.
@@ -2152,8 +2320,10 @@ function drawPlayer(p) {
   const isSai = !!(pu && pu.fx.saiyan && players.indexOf(p) === pu.fx.saiyan.who);
   if (isSai) drawSaiyanAura(p);
   if (p.slideTimer > 0) {
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 35, 15, 0, 0, Math.PI * 2); ctx.fill();
+    const sg = ctx.createLinearGradient(0, p.y - 3, 0, p.y + 27); sg.addColorStop(0, mixc(p.color, "#ffffff", 0.35)); sg.addColorStop(1, mixc(p.color, "#000000", 0.3));
+    ctx.fillStyle = sg; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 35, 15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(p.x + (p.side === 0 ? 14 : -14), p.y + 9, 3.2, 0, Math.PI * 2); ctx.fill();
   } else {
     const air = p.y < ground - 60.5;
     let sx = 1, sy = 1, bob = 0;
@@ -2162,12 +2332,8 @@ function drawPlayer(p) {
     if (p.moving) bob = -Math.abs(Math.sin(p.walkT || 0)) * 2.5;
     ctx.save();
     ctx.translate(p.x, p.y + 28 + bob); ctx.scale(sx, sy); ctx.translate(-p.x, -(p.y + 28));
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y - 10, p.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "white";
-    ctx.beginPath(); ctx.arc(p.x + (p.side === 0 ? 8 : -8), p.y - 16, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = p.color; ctx.lineWidth = 8; ctx.lineCap = "round";
-    ctx.beginPath();
+    const d = p.side === 0 ? 1 : -1, dk = mixc(p.color, "#000000", 0.4), lt = mixc(p.color, "#ffffff", 0.5), R = p.radius, cy = p.y - 10;
+    // Legs and shoes
     let fl = [p.x - 12, p.y + 28], fr = [p.x + 12, p.y + 28];
     if (p.moving) {
       const a = Math.sin(p.walkT || 0), b = Math.sin((p.walkT || 0) + Math.PI);
@@ -2176,10 +2342,87 @@ function drawPlayer(p) {
       const spread = p.vy < 0 ? 7 : 15;
       fl = [p.x - spread, p.y + 25]; fr = [p.x + spread, p.y + 25];
     }
-    ctx.moveTo(p.x - 8, p.y + 12); ctx.lineTo(fl[0], fl[1]);
-    ctx.moveTo(p.x + 8, p.y + 12); ctx.lineTo(fr[0], fr[1]);
-    ctx.stroke();
-    if (sport === "volleyball") drawArms(p);
+    ctx.lineCap = "round";
+    const bb = sport === "basketball", bm = sport === "badminton", vb = sport === "volleyball";
+    const legCol = bb ? dk : mixc(SKIN_TONE, "#000000", 0.1);
+    [["#1d1d1b", 11], [legCol, 7.5]].forEach(([col, w]) => {
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
+      ctx.moveTo(p.x - 8, p.y + 12); ctx.lineTo(fl[0], fl[1]); ctx.moveTo(p.x + 8, p.y + 12); ctx.lineTo(fr[0], fr[1]); ctx.stroke();
+    });
+    [fl, fr].forEach(f => {
+      ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2;
+      if (vb) {            // beach: bare feet
+        ctx.fillStyle = mixc(SKIN_TONE, "#000000", 0.08);
+        ctx.beginPath(); ctx.ellipse(f[0] + d * 3, f[1] + 3, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      } else if (bm) {     // badminton: white ankle socks and court shoes
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(f[0] - 4, f[1] - 8, 8, 7); ctx.strokeRect(f[0] - 4, f[1] - 8, 8, 7);
+        ctx.fillStyle = "#f4f4f4"; ctx.beginPath(); ctx.ellipse(f[0] + d * 3, f[1] + 2, 8.5, 4.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = p.color; ctx.fillRect(f[0] + d * 3 - 5, f[1] + 0.5, 10, 2.4);
+      } else {             // basketball: tall striped socks and high-top shoes
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(f[0] - 4.5, f[1] - 10, 9, 9); ctx.strokeRect(f[0] - 4.5, f[1] - 10, 9, 9);
+        ctx.fillStyle = p.color; ctx.fillRect(f[0] - 4.5, f[1] - 8, 9, 2.4);
+        ctx.fillStyle = p.color; ctx.beginPath(); ctx.ellipse(f[0] + d * 3, f[1] + 2, 9.5, 5.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(f[0] + d * 3 - 8, f[1] + 4.6, 16, 2);
+      }
+    });
+    if (sport === "volleyball") drawArms(p);   // arms sit behind the body so the face stays clear
+    // Body with soft shading
+    const g = ctx.createRadialGradient(p.x - 9, cy - 11, 3, p.x, cy, R + 3);
+    g.addColorStop(0, lt); g.addColorStop(0.45, p.color); g.addColorStop(1, dk);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(p.x, cy, R, 0, Math.PI * 2); ctx.clip();
+    if (bb) {              // basketball: team jersey, dark shorts, headband
+      ctx.fillStyle = dk; ctx.fillRect(p.x - R, p.y + 9, R * 2, R);
+      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(p.x - R, p.y + 9, R * 2, 2.5);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(p.x - 3, p.y + 12, 6, R);
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(p.x - R, cy - R + 5, R * 2, 5);
+    } else if (bm) {       // badminton: white shorts, white cap with a coloured brim
+      ctx.fillStyle = "#f6f6f2"; ctx.fillRect(p.x - R, p.y + 9, R * 2, R);
+      ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(p.x - R, p.y + 9, R * 2, 2);
+      ctx.fillStyle = "#f6f6f2"; ctx.fillRect(p.x - R, cy - R, R * 2, 13);
+      ctx.fillStyle = p.color; ctx.fillRect(p.x - R, cy - R + 9, R * 2, 3);
+    } else {               // beach volleyball: tropical board shorts, sun shades pushed up
+      ctx.fillStyle = mixc(p.color, "#ffd166", 0.6); ctx.fillRect(p.x - R, p.y + 9, R * 2, R);
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.arc(p.x + i * 8, p.y + 15 + (i % 2) * 5, 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(p.x - R, p.y + 9, R * 2, 2);
+    }
+    ctx.restore();
+    ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(p.x, cy, R, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(p.x - 9, cy - 15, 5, 3, -0.6, 0, Math.PI * 2); ctx.fill();
+    if (bb) {              // jersey armhole trim
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 3;
+      [[-1, 0], [1, 0]].forEach(([sd]) => { ctx.beginPath(); ctx.arc(p.x, cy, R - 1.5, sd < 0 ? Math.PI - 0.75 : -0.75, sd < 0 ? Math.PI + 0.75 : 0.75); ctx.stroke(); });
+    } else if (bm) {       // cap brim
+      ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#1d1d1b"; ctx.beginPath(); ctx.ellipse(p.x + d * (R - 3), cy - R + 12, 13, 3.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();   // cap brim
+      ctx.fillStyle = p.color; ctx.beginPath(); ctx.ellipse(p.x + d * (R - 3), cy - R + 12.5, 13, 1.6, 0, 0, Math.PI); ctx.fill();
+    } else {               // ponytail and pushed-up sunglasses
+      ctx.strokeStyle = "#5a3a1e"; ctx.lineWidth = 6; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(p.x - d * (R - 4), cy - R + 8); ctx.quadraticCurveTo(p.x - d * (R + 12), cy - R + 2, p.x - d * (R + 9), cy - R + 20); ctx.stroke();
+      ctx.fillStyle = "#1d1d1b"; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.5;
+      [p.x + d * 1, p.x + d * 12].forEach(lx => { ctx.beginPath(); ctx.ellipse(lx, cy - R + 7, 5.6, 3.4, 0, 0, Math.PI * 2); ctx.fill(); });
+      ctx.beginPath(); ctx.moveTo(p.x + d * 4, cy - R + 6); ctx.lineTo(p.x + d * 9, cy - R + 6); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.ellipse(p.x + d * 0, cy - R + 5.8, 2, 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(p.x + d * 11, cy - R + 5.8, 2, 1, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // Face: the eyes follow the ball
+    const ey = p.y - 15, exs = [p.x + d * 1, p.x + d * 12];
+    const lx = Math.max(-1, Math.min(1, (ball.x - p.x) / 70)), ly = Math.max(-1, Math.min(1, (ball.y - ey) / 70));
+    exs.forEach((ex, i) => {
+      ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(ex, ey, 5.3, 6.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#1d1d1b"; ctx.beginPath(); ctx.arc(ex + lx * 2.4, ey + ly * 2.8, 2.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(ex + lx * 2.4 - 0.9, ey + ly * 2.8 - 1.1, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(ex - d * 5.5 * (i ? -1 : 1) * -1, ey - 10.5); ctx.lineTo(ex + d * 5.5 * (i ? -1 : 1) * -1, ey - 8); ctx.stroke();
+    });
+    const my = p.y - 1, mx = p.x + d * 7;
+    if (p.effectTimer > 0 || p.charging) {
+      ctx.fillStyle = "#3a1010"; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(mx, my + 1, 4.5, 3.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#ff8a8a"; ctx.beginPath(); ctx.ellipse(mx, my + 2.4, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, my - 2, 4.4, 0.2, Math.PI - 0.2); ctx.stroke();
+    }
     if (isSai) drawSaiyanHair(p);
     ctx.restore();
   }
@@ -2268,18 +2511,58 @@ function drawBirdie() {
 }
 
 // Highlight the main idea of each section in your notes.
+let ballAng = 0, ballLast = { x: 0, vx: 0, vy: 0 }, hitFx = [];
 function drawBall() {
   if (pu && pu.hidden > 0) return;
+  // Spin follows how far the ball travels; a ground shadow shows its height.
+  const dxb = ball.x - ballLast.x; ballAng += Math.abs(dxb) < 80 ? dxb / ball.r : 0; ballLast.x = ball.x;
+  const hgt = Math.max(0, ground - ball.y), shs = Math.max(0.35, 1 - hgt / 380);
+  ctx.fillStyle = "rgba(0,0,0," + (0.22 * shs).toFixed(3) + ")";
+  ctx.beginPath(); ctx.ellipse(ball.x, ground + 3, ball.r * 1.15 * shs, 3.6 * shs, 0, 0, Math.PI * 2); ctx.fill();
+  // Impact ring when the ball suddenly changes direction (a hit, a bounce or a block).
+  const spd = Math.hypot(ball.vx, ball.vy), dv = Math.abs(ball.vx - ballLast.vx) + Math.abs(ball.vy - ballLast.vy);
+  if (dv > 5.5 && Math.abs(dxb) < 60 && holder < 0 && gameStarted) hitFx.push({ x: ball.x, y: ball.y, t0: performance.now() });
+  ballLast.vx = ball.vx; ballLast.vy = ball.vy;
+  const nowT = performance.now(); hitFx = hitFx.filter(h => nowT - h.t0 < 320);
+  hitFx.forEach(h => {
+    const k = (nowT - h.t0) / 320;
+    ctx.save(); ctx.globalAlpha = 0.8 * (1 - k); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3 * (1 - k) + 1;
+    ctx.beginPath(); ctx.arc(h.x, h.y, 14 + k * 34, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.4, r0 = 18 + k * 30, r1 = r0 + 9 * (1 - k); ctx.beginPath(); ctx.moveTo(h.x + Math.cos(a) * r0, h.y + Math.sin(a) * r0); ctx.lineTo(h.x + Math.cos(a) * r1, h.y + Math.sin(a) * r1); ctx.stroke(); }
+    ctx.restore();
+  });
   if (sport === "basketball") { drawBasketball(); return; }
+  if (spd > 11) {
+    ctx.save(); ctx.lineCap = "round"; const gr = ctx.createLinearGradient(ball.x, ball.y, ball.x - ball.vx * 2.6, ball.y - ball.vy * 2.6);
+    gr.addColorStop(0, "rgba(255,255,255,0.5)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.strokeStyle = gr; ctx.lineWidth = ball.r * (sport === "badminton" ? 0.6 : 1.3);
+    ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x - ball.vx * 2.6, ball.y - ball.vy * 2.6); ctx.stroke(); ctx.restore();
+  }
   if (sport === "badminton") { drawBirdie(); return; }
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#222"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r - 5, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(ball.x - ball.r, ball.y); ctx.lineTo(ball.x + ball.r, ball.y);
-  ctx.moveTo(ball.x, ball.y - ball.r); ctx.lineTo(ball.x, ball.y + ball.r);
-  ctx.stroke();
+  drawVolleyball();
+}
+// A proper volleyball: curved blue and yellow panels that spin as the ball travels.
+function drawVolleyball() {
+  const r = ball.r;
+  ctx.save(); ctx.translate(ball.x, ball.y);
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "#fbf6e4"; ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.rotate(ballAng); ctx.lineCap = "butt";
+  const cols3 = ["#2d6fd8", "#ffd23a", "#2d6fd8"];
+  for (let k = 0; k < 3; k++) {
+    ctx.save(); ctx.rotate(k * Math.PI * 2 / 3);
+    ctx.beginPath(); ctx.moveTo(-r * 1.3, -r * 0.05); ctx.quadraticCurveTo(-r * 0.2, r * 0.95, r * 1.3, r * 0.05);
+    ctx.strokeStyle = "#16213e"; ctx.lineWidth = r * 0.44 + 2.2; ctx.stroke();
+    ctx.strokeStyle = cols3[k]; ctx.lineWidth = r * 0.44; ctx.stroke();
+    ctx.restore();
+  }
+  ctx.rotate(-ballAng);
+  const sh = ctx.createRadialGradient(-r * 0.38, -r * 0.42, r * 0.1, 0, 0, r * 1.05);
+  sh.addColorStop(0, "rgba(255,255,255,0.7)"); sh.addColorStop(0.35, "rgba(255,255,255,0)"); sh.addColorStop(1, "rgba(0,0,40,0.38)");
+  ctx.fillStyle = sh; ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.restore();
+  ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2); ctx.stroke();
 }
 
 // Study schedule: break the reading into short sessions.
@@ -2344,8 +2627,10 @@ function drawHolderBits(p) {
   }
   if (holder === i) {
     const d = p.side === 0 ? 1 : -1;
-    ctx.strokeStyle = "#222"; ctx.lineWidth = 5; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(p.x + d * 10, p.y - 4); ctx.lineTo(ball.x - d * 8, Math.min(ball.y, p.y + 6)); ctx.stroke();
+    const hx = ball.x - d * 8, hy = Math.min(ball.y, p.y + 6);
+    ctx.lineCap = "round";
+    [["#1d1d1b", 9], [p.color, 5.5]].forEach(([col, w]) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(p.x + d * 10, p.y - 4); ctx.lineTo(hx, hy); ctx.stroke(); });
+    ctx.fillStyle = SKIN_TONE; ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(hx, hy, 4.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 }
 
@@ -2454,7 +2739,9 @@ function drawBasketball() {
     ctx.beginPath(); ctx.arc(t.x, t.y, ball.r * (0.3 + 0.6 * k), 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  ctx.fillStyle = "#e07b2a";
+  const bg = ctx.createRadialGradient(ball.x - ball.r * 0.35, ball.y - ball.r * 0.4, 2, ball.x, ball.y, ball.r * 1.1);
+  bg.addColorStop(0, "#ffae5c"); bg.addColorStop(0.55, "#e07b2a"); bg.addColorStop(1, "#a34d12");
+  ctx.fillStyle = bg;
   ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = "#2a1608"; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.stroke();
@@ -2469,8 +2756,8 @@ function drawTouches() {
   [0, 1].forEach(side => {
     const n = lastHitSide === side && !serveInProgress ? touches[side] : 0;
     for (let i = 0; i < lim; i++) {
-      const x = side === 0 ? 24 + i * 18 : WIDTH - 24 - i * 18;
-      ctx.beginPath(); ctx.arc(x, 24, 6, 0, Math.PI * 2);
+      const x = side === 0 ? 24 + i * 18 : WIDTH - 24 - i * 18;   // the menu button sits above the top-right corner, not on this row
+      ctx.beginPath(); ctx.arc(x, 64, 6, 0, Math.PI * 2);
       ctx.fillStyle = i < n ? (n >= lim ? "#e8382a" : "#f2b134") : "rgba(255,255,255,0.35)";
       ctx.fill(); ctx.strokeStyle = "#1d1d1b"; ctx.lineWidth = 2; ctx.stroke();
     }
@@ -2490,6 +2777,25 @@ function drawPaused() {
   ctx.fillText("Press Escape to continue", WIDTH / 2, 275);
 }
 
+// Scoreboard drawn on the court so the whole screen is the game.
+function drawHud() {
+  const w = 190, h = 40, x = WIDTH / 2 - w / 2, y = 8, c = cols();
+  ctx.save();
+  ctx.fillStyle = "rgba(14,20,34,0.82)"; ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 12) : ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();   // older browsers lack roundRect
+  const dots = gameMode === 2 ? [[x + 16, c[0]], [x + 30, c[1]], [x + w - 16, c[2]], [x + w - 30, c[3]]] : [[x + 22, c[0]], [x + w - 22, c[2]]];
+  dots.forEach(([cx, col]) => { ctx.fillStyle = col; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, y + h / 2, gameMode === 2 ? 6.5 : 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
+  ctx.fillStyle = "#ffffff"; ctx.font = "bold 26px Impact, Arial Black, Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(score1, x + 62, y + h / 2 + 1); ctx.fillText(score2, x + w - 62, y + h / 2 + 1);
+  ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.fillText(":", WIDTH / 2, y + h / 2); 
+  ctx.font = "bold 10px Arial"; ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.fillText(tourHud() + "FIRST TO " + winScore(), WIDTH / 2, y + h + 9);
+  ctx.restore();
+}
+let vigGrad = null;
+function drawVignette() {
+  if (!vigGrad) { vigGrad = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.55, WIDTH / 2, HEIGHT / 2, WIDTH * 0.62); vigGrad.addColorStop(0, "rgba(0,0,0,0)"); vigGrad.addColorStop(1, "rgba(10,10,30,0.28)"); }
+  ctx.fillStyle = vigGrad; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+}
 function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = "#ffd166"; ctx.font = "bold 48px Arial"; ctx.textAlign = "center";
@@ -2512,8 +2818,10 @@ function draw() {
   drawParticles();
   drawPuFront();
   if (shaking) ctx.restore();
+  drawVignette();
+  if (gameStarted) drawHud();
   if (gameOver) drawGameOver();
-  if (paused) drawPaused();
+  if (paused && !gamePanelOpen) drawPaused();
   if (net && gameStarted && !net.go && !briefingOpen) drawWaiting();
   if (net && net.started) drawNetInfo();
 }
@@ -3145,7 +3453,7 @@ function netCooldownUI() {
   if ((net.coolUntil || 0) > performance.now()) net.poll = setInterval(tick, 500);
 }
 function netRenderRooms(list) {
-  const box = netEl("browseList"), nm = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball" };
+  const box = netEl("browseList"), nm = SPORT_NAMES;
   if (!list.length) { box.innerHTML = '<div class="browse-row"><span>No public rooms right now. Create one and set it to public!</span></div>'; return; }
   box.innerHTML = list.map(r => `<div class="browse-row"><span><b>${esc(r.host || "Host")}</b>'s room<br>${nm[r.sport] || r.sport} · ${r.mode === 2 ? "2 vs 2" : "1 vs 1"} · ${r.n}/${r.need} players</span><button class="menu-button" onclick="netJoinListed('${String(r.code).replace(/[^A-Z]/g, "")}')">JOIN</button></div>`).join("");
 }
@@ -3293,12 +3601,12 @@ function netRenderLobby() {
     h += `<div class="lobby-row${on ? " on" : ""}"><span>${on ? "●" : "○"} ${esc(on && net.names[i] ? net.names[i] : NET_NAMES[i])}${i === 0 ? " (host)" : ""}${i === net.me ? " (you)" : ""}</span><span>${on ? "ready to play" : "waiting..."}</span></div>`;
   }
   netEl("lobbyList").innerHTML = h;
-  const nm = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball" };
+  const nm = SPORT_NAMES;
   netEl("lobbyHost").style.display = host ? "block" : "none";
   netEl("lobbyGuest").style.display = host ? "none" : "block";
   if (host) {
     ["m1", "m2"].forEach((id, i) => netEl(id).classList.toggle("on", net.mode === i + 1));
-    ["volleyball", "badminton", "basketball"].forEach(s => netEl("sp_" + s).classList.toggle("on", net.sport === s));
+    ["volleyball", "badminton", "basketball", "tournament"].forEach(s => netEl("sp_" + s).classList.toggle("on", net.sport === s));
     const btn = netEl("lobbyStart");
     btn.disabled = have !== need;
     btn.textContent = have === need ? "START MATCH" : `WAITING FOR PLAYERS (${have}/${need})`;
@@ -3333,12 +3641,18 @@ function netStart() {
   slots.forEach((s, i) => { net.pidx[s] = i; net.ready[s] = false; });
   net.colors = settings.colors.slice(); net.pi = 0;
   netSend({ t: "lock", v: true });
-  netSetup(net.mode, net.sport);
-  netRelay({ k: "start", mode: net.mode, sport: net.sport, colors: net.colors, pu: settings.powerups, pidx: net.pidx });
+  tour = net.sport === "tournament" ? newTour() : null;
+  netBegin(tour ? TOUR[0] : net.sport);
+}
+// Starts one game of a room (the first game, or the next game of a tournament).
+function netBegin(sp) {
+  Object.keys(net.pidx).forEach(sl => { net.ready[sl] = false; });
+  netSetup(net.mode, sp);
+  netRelay({ k: "start", mode: net.mode, sport: sp, ls: net.sport, tour, colors: net.colors, pu: settings.powerups, pidx: net.pidx });
   openCover();
 }
 function netGuestStart(d) {
-  net.colors = d.colors; net.pidx = d.pidx; net.pi = d.pidx[net.me]; net.mode = d.mode; net.sport = d.sport;
+  net.colors = d.colors; net.pidx = d.pidx; net.pi = d.pidx[net.me]; net.mode = d.mode; net.sport = d.ls || d.sport; tour = d.tour || null;
   settings.powerups = d.pu;
   netSetup(d.mode, d.sport);
   openCover();
@@ -3352,8 +3666,8 @@ function netCheckGo() {
   if (Object.keys(net.ready).every(k => net.ready[k])) { net.go = true; Object.values(net.rin).forEach(r => { r.j = r.sl = r.se = r.sp = 0; }); }
 }
 function netToLobbyScreen(note) {
-  gameStarted = false; net.started = false; net.go = false;
-  hideStats(); hideBriefing(); setPaused(false);
+  tour = null; gameStarted = false; net.started = false; net.go = false;
+  closeGamePanel(true); hideStats(); hideBriefing(); setPaused(false);
   netEl("restartBtn").style.display = "";
   document.getElementById("menu").style.display = "flex";
   document.getElementById("gameArea").style.display = "none";
