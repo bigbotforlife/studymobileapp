@@ -90,7 +90,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 #netCode { text-transform: uppercase; letter-spacing: 6px; text-align: center; font-size: 22px; font-weight: 900; }
 .net-or { margin: 10px 0 8px !important; font-size: 14px; }
 #netMsg, #lobbyNote { min-height: 20px; margin: 4px 0 6px; font-size: 14px; color: #c9501f; font-weight: bold; }
-#lobbyCode { font-size: 54px; font-weight: 900; letter-spacing: 8px; margin: 0 0 10px; }
+#lobbyCode { font-size: 54px; font-weight: 900; letter-spacing: 8px; margin: 0; }
+.lobby-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+#lobbyPU { width: auto; margin: 0; padding: 10px 12px; font-size: 14px; flex-shrink: 0; }
+#lobbyPU.on { background: #ffd166; }
+#lobbyPU.locked { pointer-events: none; cursor: default; }
 .lobby-row { display: flex; justify-content: space-between; padding: 7px 10px; margin-bottom: 5px; border: 3px solid #1d1d1b; background: #e3d6b8; font-size: 15px; }
 .lobby-row.on { background: #fffaf0; }
 .pick-row { display: flex; gap: 8px; }
@@ -154,7 +158,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 
 <div id="lobbyStep" style="display:none">
 <p>Room code <button class="small-btn" onclick="netCopyCode()">COPY</button></p>
-<div id="lobbyCode">----</div>
+<div class="lobby-top"><div id="lobbyCode">----</div><button id="lobbyPU" class="menu-button" onclick="netTogglePU()">POWER-UPS: OFF</button></div>
 <div id="lobbyList"></div>
 <div id="lobbyHost">
 <div class="pick-row"><button id="m1" class="menu-button" onclick="netSetMode(1)">1 VS 1</button><button id="m2" class="menu-button" onclick="netSetMode(2)">2 VS 2</button></div>
@@ -2991,7 +2995,7 @@ function netConnect(kind) {
   let ws;
   try { ws = new WebSocket(url); } catch (e) { msg.textContent = "That server address does not look right."; return; }
   net = { ws, role: kind === "create" ? "host" : "guest", code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
-    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, savedPU: settings.powerups, lastIn: "", inTick: 0 };
+    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0 };
   ws.onopen = () => netSend(kind === "create" ? { t: "create" } : { t: "join", code });
   ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
   ws.onerror = () => { if (net && net.ws === ws && !net.code) { msg.textContent = "Could not reach the server."; netLeave(); } };
@@ -3036,7 +3040,7 @@ function netOnMsg(m) {
   if (m.t === "m" && m.d) {
     const d = m.d;
     if (d.k === "snap") netApply(d);
-    else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; if (!net.started) netRenderLobby(); }
+    else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; net.pu = !!d.pu; if (!net.started) netRenderLobby(); }
     else if (d.k === "start") netGuestStart(d);
     else if (d.k === "rematch") { hideStats(); particles = []; dust = []; gameOver = false; }
     else if (d.k === "tolobby") netGuestToLobby(d.note);
@@ -3053,6 +3057,11 @@ function netCount() { return net.roster.filter(Boolean).length; }
 function netRenderLobby() {
   if (!net) return;
   netEl("lobbyCode").textContent = net.code;
+  const pb = netEl("lobbyPU");
+  pb.textContent = "POWER-UPS: " + (net.pu ? "ON" : "OFF");
+  pb.classList.toggle("on", !!net.pu);
+  pb.classList.toggle("locked", net.role !== "host");
+  pb.title = net.role === "host" ? "Click to turn power-ups on or off" : "Only the host can change this";
   const need = net.mode === 2 ? 4 : 2, have = netCount(), host = net.role === "host";
   let h = "";
   for (let i = 0; i < 4; i++) {
@@ -3074,7 +3083,8 @@ function netRenderLobby() {
     netEl("lobbyGuest").textContent = `Waiting for the host to start: ${nm[net.sport]}, ${net.mode === 2 ? "2 vs 2" : "1 vs 1"}.`;
   }
 }
-function netLobbyUpdate() { netRenderLobby(); netRelay({ k: "lobby", roster: net.roster, mode: net.mode, sport: net.sport }); }
+function netLobbyUpdate() { netRenderLobby(); netRelay({ k: "lobby", roster: net.roster, mode: net.mode, sport: net.sport, pu: net.pu }); }
+function netTogglePU() { if (net && net.role === "host") { net.pu = !net.pu; settings.powerups = net.pu; netLobbyUpdate(); } }
 function netSetMode(m) { if (net && net.role === "host") { net.mode = m; netLobbyUpdate(); } }
 function netSetSport(s) { if (net && net.role === "host") { net.sport = s; netLobbyUpdate(); } }
 function netCopyCode() { try { navigator.clipboard.writeText(net.code); netEl("lobbyNote").textContent = "Code copied."; } catch (e) {} }
