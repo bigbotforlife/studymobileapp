@@ -89,7 +89,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .cb-keys { display: flex; gap: 6px; }
 .kc { display: inline-block; min-width: clamp(26px, 4.4vh, 38px); padding: 3px 8px; text-align: center; background: #fff8e6; color: #1d1d1b; border: 3px solid #1d1d1b; border-bottom-width: 5px; border-radius: 8px; font-weight: 900; font-size: clamp(12px, 2.3vh, 18px); text-shadow: none; }
 .cb-note { font-size: clamp(11px, 2vh, 16px); opacity: 0.9; text-align: center; margin-top: 4px; }
-#netServer, #netCode { width: 100%; padding: 10px; font: inherit; font-size: 14px; border: 3px solid #1d1d1b; background: #fffaf0; margin-bottom: 8px; box-sizing: border-box; }
+#netName, #netServer, #netCode { width: 100%; padding: 10px; font: inherit; font-size: 14px; border: 3px solid #1d1d1b; background: #fffaf0; margin-bottom: 8px; box-sizing: border-box; }
 #netCode { text-transform: uppercase; letter-spacing: 6px; text-align: center; font-size: 22px; font-weight: 900; }
 .net-or { margin: 10px 0 8px !important; font-size: 14px; }
 #netMsg, #lobbyNote { min-height: 20px; margin: 4px 0 6px; font-size: 14px; color: #c9501f; font-weight: bold; }
@@ -104,6 +104,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .pick-row button { flex: 1; margin: 4px 0; padding: 10px 4px; font-size: 15px; }
 .pick-row button.on { background: #ffd166; }
 #lobbyGuest { margin: 10px 0; font-size: 16px; color: #3a362e; }
+.browse-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border: 3px solid #1d1d1b; background: #fffaf0; font-size: 15px; text-align: left; }
+.browse-row button { width: auto; margin: 0; padding: 8px 14px; font-size: 14px; flex-shrink: 0; }
+#browseList { max-height: 300px; overflow-y: auto; margin-bottom: 6px; }
+#browseMsg { min-height: 20px; font-size: 14px; color: #c9501f; font-weight: bold; margin: 4px 0 6px; }
+#lobbyPub { padding: 10px; font-size: 15px; }
+#lobbyPub.on { background: #ffd166; }
 .menu-button:disabled { opacity: 0.55; cursor: default; }
 </style>
 </head>
@@ -151,13 +157,23 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 
 <div id="onlineStep" style="display:none">
 <p>Play with friends on any computer!</p>
+<input id="netName" placeholder="Enter a username" maxlength="16" autocomplete="off" spellcheck="false">
 <input id="netServer" placeholder="Server address" autocomplete="off" spellcheck="false">
 <button class="menu-button" onclick="netConnect('create')">CREATE A ROOM</button>
 <p class="net-or">or join a friend's room</p>
 <input id="netCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
 <button class="menu-button" onclick="netConnect('join')">JOIN ROOM</button>
+<button class="menu-button" onclick="netBrowse()">BROWSE PUBLIC ROOMS</button>
 <div id="netMsg"></div>
 <button class="menu-button back-button" onclick="showModeStep()">← BACK</button>
+</div>
+
+<div id="browseStep" style="display:none">
+<p>Public rooms open right now</p>
+<div id="browseList"></div>
+<button id="browseRefresh" class="menu-button" onclick="netRefreshClick()">REFRESH</button>
+<div id="browseMsg"></div>
+<button class="menu-button back-button" onclick="netBrowseBack()">← BACK</button>
 </div>
 
 <div id="lobbyStep" style="display:none">
@@ -167,6 +183,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <div id="lobbyHost">
 <div class="pick-row"><button id="m1" class="menu-button" onclick="netSetMode(1)">1 VS 1</button><button id="m2" class="menu-button" onclick="netSetMode(2)">2 VS 2</button></div>
 <div class="pick-row"><button id="sp_volleyball" class="menu-button" onclick="netSetSport('volleyball')">Volleyball</button><button id="sp_badminton" class="menu-button" onclick="netSetSport('badminton')">Badminton</button><button id="sp_basketball" class="menu-button" onclick="netSetSport('basketball')">Basketball</button></div>
+<button id="lobbyPub" class="menu-button" onclick="netTogglePub()">ROOM: PRIVATE</button>
 <button id="lobbyStart" class="menu-button" onclick="netStart()">START MATCH</button>
 </div>
 <div id="lobbyGuest"></div>
@@ -618,7 +635,7 @@ requestAnimationFrame(menuBgFrame);
 
 // Summary of this topic for exam revision.
 function showStep(id) {
-  ["modeStep","oppStep","diffStep","sportStep","onlineStep","lobbyStep"].forEach(s => {
+  ["modeStep","oppStep","diffStep","sportStep","onlineStep","browseStep","lobbyStep"].forEach(s => {
     document.getElementById(s).style.display = s === id ? "block" : "none";
   });
 }
@@ -777,7 +794,7 @@ function openCover() {
   let top, bot2;
   if (net) {
     top = [ctrlBoxHTML(players[net.pi].slot, 0, `YOU · ${teamName(players[net.pi].side)}`)];
-    const who = players.map((p, i) => `<span style="color:${p.color}">&#9679;</span> ${i === net.pi ? "You" : (i === 0 ? "Host" : "Player " + (i + 1))}`).join("<br>");
+    const who = players.map((p, i) => `<span style="color:${p.color}">&#9679;</span> ${i === net.pi ? "You" : esc(netPlayerName(i))}`).join("<br>");
     bot2 = [`<div class="ctrl-box sp-${sport}" style="--c:#8a8a8a;--c2:#4a4a4a"><div class="cb-title">ROOM ${net.code}</div><div class="cb-note">${who}<br><br>The match starts when everyone is ready.</div></div>`];
   } else if (gameMode === 1) {
     top = [ctrlBoxHTML(0, 0, `PLAYER 1 · ${t0}`)];
@@ -3004,27 +3021,67 @@ function netUrl() {
   return v;
 }
 function openOnline() {
+  const nb = netEl("netName");
+  try { localStorage.removeItem("sg-name"); } catch (e) {}
   const box = netEl("netServer");
   box.style.display = DEFAULT_SERVER ? "none" : "block";
   if (!box.value) { try { box.value = localStorage.getItem("sg-server") || ""; } catch (e) {} }
   netEl("netMsg").textContent = "";
   showStep("onlineStep");
 }
+// Username filter: strips look-alike characters, then checks banned words inside the name and as whole words.
+const NAME_INSIDE = ["fuck", "shit", "bitch", "cunt", "nigg", "whore", "slut", "asshole", "dumbass", "bastard", "pussy", "penis", "vagina", "blowjob", "handjob", "cumshot", "jizz", "hentai", "molest", "pedophile", "paedophile", "retard", "faggot", "tranny", "wetback", "hitler", "dildo", "vibrator", "masturbat", "orgasm", "genital", "boob", "cocksuck", "anus", "porno"];
+const NAME_WHOLE = ["ass", "arse", "tit", "tits", "dick", "cock", "piss", "fag", "rape", "raped", "rapist", "rapists", "nazi", "pedo", "spic", "kike", "coon", "dyke", "gook", "chink", "negro", "cum", "sex", "boner", "anal", "nude", "nudes", "kkk", "horny", "milf", "orgy", "incest", "wank", "wanker", "twat", "bollock", "bollocks", "porn", "xxx", "nsfw", "hoe", "thot", "cuck", "simp"];
+const NAME_OK = ["scunthorpe", "penistone", "analyst", "analysis", "shiitake", "therapist"];
+const NAME_RE_IN = NAME_INSIDE.map(w => new RegExp(w.split("").map(c => c + "+").join("")));
+const NAME_RE_WH = NAME_WHOLE.map(w => new RegExp("^" + w.split("").map(c => c + "+").join("") + "$"));
+function nameBlocked(raw) {
+  const base = String(raw || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const maps = [{ "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "i", "+": "t", "8": "b" }, { "0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "l", "+": "t", "8": "b" }];
+  for (const m of maps) {
+    const s = base.replace(/[0-9@$!+]/g, c => m[c] || c);
+    const tokens = s.split(/[^a-z]+/).filter(Boolean);
+    let joined = tokens.join("");
+    NAME_OK.forEach(w => { joined = joined.split(w).join(""); });
+    if (NAME_RE_IN.some(re => re.test(joined))) return true;
+    if (NAME_RE_WH.some(re => re.test(joined) || tokens.some(t => re.test(t)))) return true;
+  }
+  return false;
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function netCleanName(s) { return String(s || "").replace(/[\u0000-\u001f\u007f<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16); }
+// Everyone needs a username before they can create, join or browse rooms.
+function netGetName() {
+  const box = netEl("netName"), v = netCleanName(box.value);
+  if (!v) { netEl("netMsg").textContent = "Enter a username first."; box.focus(); return ""; }
+  if (nameBlocked(v)) { netEl("netMsg").textContent = "That username is not allowed. Please choose another."; box.focus(); return ""; }
+  box.value = v;
+  return v;
+}
+function netPlayerName(i) {
+  const slot = Object.keys(net.pidx).find(s => net.pidx[s] === i);
+  const nm = slot !== undefined ? net.names[slot] : "";
+  return nm || (i === 0 ? "Host" : "Player " + (i + 1));
+}
+function netNew(ws, role) {
+  return { ws, role, name: netCleanName(netEl("netName").value) || "Player", names: ["", "", "", ""], code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
+    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0,
+    dc: {}, pc: {}, iceq: {}, last: {}, snapSeq: 0, gotSeq: 0, inSeq: 0, cnt: { j: 0, s: 0, e: 0, p: 0 }, burst: 0, pingTick: 0, rtt: 0, gpc: null, dcu: null, dcr: null, gice: [] };
+}
 function netConnect(kind) {
   const msg = netEl("netMsg");
   const code = netEl("netCode").value.trim().toUpperCase();
   if (kind === "join" && code.length !== 4) { msg.textContent = "Type the 4-letter room code first."; return; }
+  const nm = netGetName(); if (!nm) return;
   let url;
   try { url = netUrl(); } catch (e) { msg.textContent = "Online play is not set up on this page yet."; return; }
   netLeave();
   msg.textContent = "Connecting...";
   let ws;
   try { ws = new WebSocket(url); } catch (e) { msg.textContent = "That server address does not look right."; return; }
-  net = { ws, role: kind === "create" ? "host" : "guest", code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
-    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0,
-    dc: {}, pc: {}, iceq: {}, last: {}, snapSeq: 0, gotSeq: 0, inSeq: 0, cnt: { j: 0, s: 0, e: 0, p: 0 }, burst: 0, pingTick: 0, rtt: 0, gpc: null, dcu: null, dcr: null, gice: [] };
-  try { net.worker = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(0)},8)"], { type: "text/javascript" }))); net.worker.onmessage = () => { if (net) stepSim(performance.now()); }; } catch (e) { net.worker = null; }
-  ws.onopen = () => netSend(kind === "create" ? { t: "create" } : { t: "join", code });
+  net = netNew(ws, kind === "create" ? "host" : "guest");
+  netStartWorker();
+  ws.onopen = () => netSend(kind === "create" ? { t: "create", name: nm } : { t: "join", code, name: nm });
   ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
   ws.onerror = () => { if (net && net.ws === ws && !net.code) { msg.textContent = "Could not reach the server."; netLeave(); } };
   ws.onclose = () => {
@@ -3033,9 +3090,65 @@ function netConnect(kind) {
     netGone("Connection lost.");
   };
 }
+function netStartWorker() {
+  if (net.worker) return;
+  try { net.worker = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(0)},8)"], { type: "text/javascript" }))); net.worker.onmessage = () => { if (net) stepSim(performance.now()); }; } catch (e) { net.worker = null; }
+}
+function netBrowse() {
+  const msg = netEl("netMsg");
+  if (!netGetName()) return;
+  let url;
+  try { url = netUrl(); } catch (e) { msg.textContent = "Online play is not set up on this page yet."; return; }
+  netLeave();
+  msg.textContent = "Connecting...";
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { msg.textContent = "That server address does not look right."; return; }
+  net = netNew(ws, "browse");
+  ws.onopen = () => { net.opened = true; netEl("browseMsg").textContent = ""; netEl("browseList").innerHTML = ""; showStep("browseStep"); netSend({ t: "list" }); netCooldownUI(); };
+  ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
+  ws.onerror = () => { if (net && net.ws === ws && !net.opened) { msg.textContent = "Could not reach the server."; netLeave(); } };
+  ws.onclose = () => {
+    if (!net || net.ws !== ws) return;
+    if (!net.opened) { msg.textContent = "Could not reach the server."; netLeave(); return; }
+    if (net.role === "browse") { netLeave(); showStep("onlineStep"); netEl("netMsg").textContent = "Connection lost."; return; }
+    if (!net.code) { netLeave(); showStep("onlineStep"); netEl("netMsg").textContent = "Connection lost."; return; }
+    netGone("Connection lost.");
+  };
+}
+function netRefreshClick() {
+  if (!net || net.role !== "browse" || performance.now() < (net.coolUntil || 0)) return;
+  netSend({ t: "list" });
+  net.coolUntil = performance.now() + 10000;
+  netCooldownUI();
+}
+function netCooldownUI() {
+  const b = netEl("browseRefresh");
+  if (!net) return;
+  clearInterval(net.poll);
+  const tick = () => {
+    if (!net) return;
+    const left = Math.ceil(((net.coolUntil || 0) - performance.now()) / 1000);
+    if (left > 0) { b.disabled = true; b.textContent = "REFRESH (" + left + ")"; }
+    else { b.disabled = false; b.textContent = "REFRESH"; clearInterval(net.poll); net.poll = null; }
+  };
+  tick();
+  if ((net.coolUntil || 0) > performance.now()) net.poll = setInterval(tick, 500);
+}
+function netRenderRooms(list) {
+  const box = netEl("browseList"), nm = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball" };
+  if (!list.length) { box.innerHTML = '<div class="browse-row"><span>No public rooms right now. Create one and set it to public!</span></div>'; return; }
+  box.innerHTML = list.map(r => `<div class="browse-row"><span><b>${esc(r.host || "Host")}</b>'s room<br>${nm[r.sport] || r.sport} · ${r.mode === 2 ? "2 vs 2" : "1 vs 1"} · ${r.n}/${r.need} players</span><button class="menu-button" onclick="netJoinListed('${String(r.code).replace(/[^A-Z]/g, "")}')">JOIN</button></div>`).join("");
+}
+function netJoinListed(code) {
+  if (!net || net.role !== "browse") return;
+  clearInterval(net.poll); net.poll = null; net.role = "guest"; net.fromBrowse = true; netStartWorker();
+  netSend({ t: "join", code, name: net.name });
+}
+function netBrowseBack() { netLeave(); showStep("onlineStep"); netEl("netMsg").textContent = ""; }
 function netLeave() {
   if (!net) return;
   const n = net; net = null;
+  if (n.poll) clearInterval(n.poll);
   try { Object.keys(n.pc).forEach(s => n.pc[s].close()); if (n.gpc) n.gpc.close(); if (n.worker) n.worker.terminate(); } catch (e) {}
   try { n.ws.onclose = null; n.ws.onerror = null; n.ws.close(); } catch (e) {}
   settings.powerups = n.savedPU;
@@ -3045,14 +3158,21 @@ function netGone(text) { netNote = text; backToMenu(); }
 
 function netOnMsg(m) {
   if (!net) return;
-  if (m.t === "created") { net.code = m.code; net.me = 0; net.roster[0] = true; netShowLobby(); return; }
+  if (m.t === "created") { net.code = m.code; net.me = 0; net.roster[0] = true; net.names[0] = net.name; netShowLobby(); netLobbyUpdate(); return; }
   if (m.t === "joined") { net.code = m.code; net.me = m.slot; netShowLobby(); return; }
-  if (m.t === "err") { netEl("netMsg").textContent = m.m; netLeave(); return; }
+  if (m.t === "rooms") { if (net.role === "browse") netRenderRooms(m.rooms); return; }
+  if (m.t === "err") {
+    if (net.fromBrowse) {
+      net.fromBrowse = false; net.role = "browse"; if (net.worker) { net.worker.terminate(); net.worker = null; }
+      netEl("browseMsg").textContent = m.m; net.coolUntil = 0; netSend({ t: "list" }); netRefreshClick(); return;
+    }
+    netEl("netMsg").textContent = m.m; netLeave(); return;
+  }
   if (m.t === "closed") { netGone("The host closed the room."); return; }
   if (net.role === "host") {
-    if (m.t === "join") { net.roster[m.slot] = true; netP2PHost(m.slot); netLobbyUpdate(); }
+    if (m.t === "join") { net.roster[m.slot] = true; net.names[m.slot] = netCleanName(m.name) || "Player"; netP2PHost(m.slot); netLobbyUpdate(); }
     else if (m.t === "left") {
-      net.roster[m.slot] = false; delete net.rin[net.pidx[m.slot]]; netP2PDrop(m.slot);
+      net.roster[m.slot] = false; net.names[m.slot] = ""; delete net.rin[net.pidx[m.slot]]; netP2PDrop(m.slot);
       if (net.started) netHostToLobby("A player left, so the match ended.");
       else netLobbyUpdate();
     }
@@ -3131,7 +3251,7 @@ function netGuestGot(d) {
   else if (d.k === "ev") netEv(d.ev);
   else if (d.k === "pong") { const r = performance.now() - d.t; net.rtt = net.rtt ? net.rtt * 0.7 + r * 0.3 : r; }
   else if (d.k === "rtc") netP2PGuest(d);
-  else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; net.pu = !!d.pu; if (!net.started) netRenderLobby(); }
+  else if (d.k === "lobby") { net.roster = d.roster; net.names = d.names || net.names; net.mode = d.mode; net.sport = d.sport; net.pu = !!d.pu; if (!net.started) netRenderLobby(); }
   else if (d.k === "start") netGuestStart(d);
   else if (d.k === "rematch") { hideStats(); particles = []; dust = []; gameOver = false; }
   else if (d.k === "tolobby") netGuestToLobby(d.note);
@@ -3147,6 +3267,9 @@ function netCount() { return net.roster.filter(Boolean).length; }
 function netRenderLobby() {
   if (!net) return;
   netEl("lobbyCode").textContent = net.code;
+  const pub = netEl("lobbyPub");
+  pub.textContent = "ROOM: " + (net.pub ? "PUBLIC (anyone can join)" : "PRIVATE (code only)");
+  pub.classList.toggle("on", !!net.pub);
   const pb = netEl("lobbyPU");
   pb.textContent = "POWER-UPS: " + (net.pu ? "ON" : "OFF");
   pb.classList.toggle("on", !!net.pu);
@@ -3157,7 +3280,7 @@ function netRenderLobby() {
   for (let i = 0; i < 4; i++) {
     if (net.mode === 1 && i > 1 && !net.roster[i]) continue;
     const on = net.roster[i];
-    h += `<div class="lobby-row${on ? " on" : ""}"><span>${on ? "●" : "○"} ${NET_NAMES[i]}${i === net.me ? " (you)" : ""}</span><span>${on ? "ready to play" : "waiting..."}</span></div>`;
+    h += `<div class="lobby-row${on ? " on" : ""}"><span>${on ? "●" : "○"} ${esc(on && net.names[i] ? net.names[i] : NET_NAMES[i])}${i === 0 ? " (host)" : ""}${i === net.me ? " (you)" : ""}</span><span>${on ? "ready to play" : "waiting..."}</span></div>`;
   }
   netEl("lobbyList").innerHTML = h;
   const nm = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball" };
@@ -3173,7 +3296,8 @@ function netRenderLobby() {
     netEl("lobbyGuest").textContent = `Waiting for the host to start: ${nm[net.sport]}, ${net.mode === 2 ? "2 vs 2" : "1 vs 1"}.`;
   }
 }
-function netLobbyUpdate() { netRenderLobby(); netRelay({ k: "lobby", roster: net.roster, mode: net.mode, sport: net.sport, pu: net.pu }); }
+function netTogglePub() { if (net && net.role === "host") { net.pub = !net.pub; netLobbyUpdate(); } }
+function netLobbyUpdate() { netSend({ t: "meta", pub: !!net.pub, mode: net.mode, sport: net.sport }); netRenderLobby(); netRelay({ k: "lobby", roster: net.roster, names: net.names, mode: net.mode, sport: net.sport, pu: net.pu }); }
 function netTogglePU() { if (net && net.role === "host") { net.pu = !net.pu; settings.powerups = net.pu; netLobbyUpdate(); } }
 function netSetMode(m) { if (net && net.role === "host") { net.mode = m; netLobbyUpdate(); } }
 function netSetSport(s) { if (net && net.role === "host") { net.sport = s; netLobbyUpdate(); } }
