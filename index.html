@@ -86,6 +86,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .cb-keys { display: flex; gap: 6px; }
 .kc { display: inline-block; min-width: clamp(26px, 4.4vh, 38px); padding: 3px 8px; text-align: center; background: #fff8e6; color: #1d1d1b; border: 3px solid #1d1d1b; border-bottom-width: 5px; border-radius: 8px; font-weight: 900; font-size: clamp(12px, 2.3vh, 18px); text-shadow: none; }
 .cb-note { font-size: clamp(11px, 2vh, 16px); opacity: 0.9; text-align: center; margin-top: 4px; }
+#netServer, #netCode { width: 100%; padding: 10px; font: inherit; font-size: 14px; border: 3px solid #1d1d1b; background: #fffaf0; margin-bottom: 8px; box-sizing: border-box; }
+#netCode { text-transform: uppercase; letter-spacing: 6px; text-align: center; font-size: 22px; font-weight: 900; }
+.net-or { margin: 10px 0 8px !important; font-size: 14px; }
+#netMsg, #lobbyNote { min-height: 20px; margin: 4px 0 6px; font-size: 14px; color: #c9501f; font-weight: bold; }
+#lobbyCode { font-size: 54px; font-weight: 900; letter-spacing: 8px; margin: 0 0 10px; }
+.lobby-row { display: flex; justify-content: space-between; padding: 7px 10px; margin-bottom: 5px; border: 3px solid #1d1d1b; background: #e3d6b8; font-size: 15px; }
+.lobby-row.on { background: #fffaf0; }
+.pick-row { display: flex; gap: 8px; }
+.pick-row button { flex: 1; margin: 4px 0; padding: 10px 4px; font-size: 15px; }
+.pick-row button.on { background: #ffd166; }
+#lobbyGuest { margin: 10px 0; font-size: 16px; color: #3a362e; }
+.menu-button:disabled { opacity: 0.55; cursor: default; }
 </style>
 </head>
 <body>
@@ -103,6 +115,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <p>Select your game mode!</p>
 <button class="menu-button" onclick="chooseMode(1)">1 VS 1</button>
 <button class="menu-button" onclick="chooseMode(2)">2 VS 2</button>
+<button class="menu-button" onclick="openOnline()">PLAY ONLINE</button>
 </div>
 
 <div id="oppStep" style="display:none">
@@ -127,6 +140,31 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <button class="menu-button" onclick="hostOrLocalStart('basketball')">Basketball</button>
 <button class="menu-button back-button" onclick="backFromSport()">← BACK</button>
 </div>
+
+<div id="onlineStep" style="display:none">
+<p>Play with friends on any computer!</p>
+<input id="netServer" placeholder="Server address" autocomplete="off" spellcheck="false">
+<button class="menu-button" onclick="netConnect('create')">CREATE A ROOM</button>
+<p class="net-or">or join a friend's room</p>
+<input id="netCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+<button class="menu-button" onclick="netConnect('join')">JOIN ROOM</button>
+<div id="netMsg"></div>
+<button class="menu-button back-button" onclick="showModeStep()">← BACK</button>
+</div>
+
+<div id="lobbyStep" style="display:none">
+<p>Room code <button class="small-btn" onclick="netCopyCode()">COPY</button></p>
+<div id="lobbyCode">----</div>
+<div id="lobbyList"></div>
+<div id="lobbyHost">
+<div class="pick-row"><button id="m1" class="menu-button" onclick="netSetMode(1)">1 VS 1</button><button id="m2" class="menu-button" onclick="netSetMode(2)">2 VS 2</button></div>
+<div class="pick-row"><button id="sp_volleyball" class="menu-button" onclick="netSetSport('volleyball')">Volleyball</button><button id="sp_badminton" class="menu-button" onclick="netSetSport('badminton')">Badminton</button><button id="sp_basketball" class="menu-button" onclick="netSetSport('basketball')">Basketball</button></div>
+<button id="lobbyStart" class="menu-button" onclick="netStart()">START MATCH</button>
+</div>
+<div id="lobbyGuest"></div>
+<div id="lobbyNote"></div>
+<button class="menu-button back-button" onclick="backToMenu()">LEAVE ROOM</button>
+</div>
 </div>
 </div>
 
@@ -146,7 +184,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <div class="brief-card">
 <h1 id="statsTitle"></h1>
 <div id="statsBody"></div>
-<button class="menu-button" onclick="restart()">PLAY AGAIN</button>
+<button class="menu-button" id="statsAgain" onclick="restart()">PLAY AGAIN</button>
 <button class="menu-button back-button" onclick="backToMenu()">MAIN MENU</button>
 </div>
 </div>
@@ -207,6 +245,7 @@ let streakOwner = [-1, -1];
 let touches = [0, 0], notice = null, lastHitTick = -1, shakeUntil = 0, shakeMag = 0;
 let stats = null, rally = 0, longestRally = 0, matchTicks = 0, statsOpen = false;
 let playerTouchingBall = [];
+let net = null;
 
 const keys = {};
 const pressed = {};
@@ -249,8 +288,8 @@ function keyLabel(k) {
   return k.toUpperCase();
 }
 function colorName(hex) { const f = PALETTE.find(p => p[1] === hex); return f ? f[0] : "Custom"; }
-function teamName(side) { return colorName(settings.colors[side === 0 ? 0 : 2]).toUpperCase(); }
-function applyPlayerSettings() { players.forEach(p => { p.color = settings.colors[p.slot]; p.map = toMap(settings.binds[p.bindSlot]); }); }
+function teamName(side) { return colorName(cols()[side === 0 ? 0 : 2]).toUpperCase(); }
+function applyPlayerSettings() { if (net) { players.forEach(p => { p.map = toMap(settings.binds[0]); }); return; } players.forEach(p => { p.color = settings.colors[p.slot]; p.map = toMap(settings.binds[p.bindSlot]); }); }
 
 // Review the key terms before moving on to the next chapter.
 function normalizeKey(e) {
@@ -297,7 +336,7 @@ function closeSettings() {
   document.getElementById("settingsView").style.display = "none";
   applyPlayerSettings(); saveSettings();
   // Keys and power-ups change how a match plays, so they restart it; looks and sound do not.
-  const dirty = gameStarted && settingsSnap !== JSON.stringify([settings.binds, settings.powerups]);
+  const dirty = !net && gameStarted && settingsSnap !== JSON.stringify([settings.binds, settings.powerups]);
   if (gameStarted) updateControls();
   if (dirty) { restart(); openCover(); }
   else if (coverOpen) openCover();
@@ -444,7 +483,11 @@ function readKeys(p, m) {
 
 // Practice questions - attempt before reading the solution.
 function gatherInputs() {
-  players.forEach(p => { if (!p.isBot) readKeys(p, p.map); });
+  players.forEach((p, i) => {
+    if (p.isBot) return;
+    if (net) { if (i === net.pi) readKeys(p, p.map); else netApplyRemote(p, i); }
+    else readKeys(p, p.map);
+  });
 }
 
 // Past-paper style question for self-assessment.
@@ -462,7 +505,7 @@ let players = [];
 // Cross-reference with the textbook chapter.
 function createPlayers() {
   players = [];
-  const add = (slot, x, side, bs) => { const p = createPlayer(x, side, settings.colors[slot], toMap(settings.binds[bs === undefined ? slot : bs])); p.slot = slot; p.bindSlot = bs === undefined ? slot : bs; players.push(p); };
+  const add = (slot, x, side, bs) => { const p = createPlayer(x, side, cols()[slot], toMap(settings.binds[bs === undefined ? slot : bs])); p.slot = slot; p.bindSlot = bs === undefined ? slot : bs; players.push(p); };
   add(0, gameMode === 1 ? 180 : 150, 0);
   if (gameMode === 2) add(1, 300, 0);
   add(2, gameMode === 1 ? 720 : 600, 1, gameMode === 1 ? 1 : 2);
@@ -551,7 +594,7 @@ requestAnimationFrame(menuBgFrame);
 
 // Summary of this topic for exam revision.
 function showStep(id) {
-  ["modeStep","oppStep","diffStep","sportStep"].forEach(s => {
+  ["modeStep","oppStep","diffStep","sportStep","onlineStep","lobbyStep"].forEach(s => {
     document.getElementById(s).style.display = s === id ? "block" : "none";
   });
 }
@@ -620,9 +663,10 @@ function controlsHTML() {
   const spk = sport === "badminton" ? "Clear/Smash (hold)" : S.spikeName;
   const blk = (slot, label, bs) => {
     const b = settings.binds[bs === undefined ? slot : bs], L = keyLabel;
-    return `<b style="color:${settings.colors[slot]}">${label}</b><br>Move: ${L(b.left)} / ${L(b.right)} | Jump: ${L(b.jump)}<br><span class="abilities">Slide: ${L(b.slide)} | ${S.setName}: ${L(b.set)} | ${spk}: ${L(b.spike)}</span>`;
+    return `<b style="color:${cols()[slot]}">${label}</b><br>Move: ${L(b.left)} / ${L(b.right)} | Jump: ${L(b.jump)}<br><span class="abilities">Slide: ${L(b.slide)} | ${S.setName}: ${L(b.set)} | ${spk}: ${L(b.spike)}</span>`;
   };
   const t0 = teamName(0), t1 = teamName(1);
+  if (net) return blk(players[net.pi].slot, `YOU (${teamName(players[net.pi].side)})`, 0);
   if (gameMode === 1) {
     return blk(0, `PLAYER 1 (${t0})`) + "<br><br>" +
       (bot ? `<b style="color:${settings.colors[2]}">BOT (${t1}) · ${bot.level.toUpperCase()}</b>` : blk(2, `PLAYER 2 (${t1})`, 1));
@@ -666,6 +710,7 @@ const BRIEF = {
 let briefingOpen = false;
 
 function setPaused(v) {
+  if (net && v) return;
   paused = v;
   for (const k in keys) keys[k] = false;
 }
@@ -694,7 +739,7 @@ let coverOpen = false, coverTimer = null;
 function ctrlBoxHTML(slot, bs, title) {
   const b = settings.binds[bs], L = keyLabel, S = SPORTS[sport];
   const spk = sport === "badminton" ? "Clear / Smash (hold)" : S.spikeName;
-  const c = settings.colors[slot];
+  const c = cols()[slot];
   const row = (label, keys) => `<div class="cb-row"><span>${label}</span><span class="cb-keys">${keys.map(k => `<span class="kc">${L(k)}</span>`).join("")}</span></div>`;
   return `<div class="ctrl-box sp-${sport}" style="--c:${c};--c2:${shade(c, 0.45)}"><div class="cb-title">${title}</div>` +
     row("Move", [b.left, b.right]) + row("Jump", [b.jump]) + row("Slide", [b.slide]) + row(S.setName, [b.set]) + row(spk, [b.spike]) + `</div>`;
@@ -706,7 +751,11 @@ function botBoxHTML() {
 function openCover() {
   const t0 = teamName(0), t1 = teamName(1);
   let top, bot2;
-  if (gameMode === 1) {
+  if (net) {
+    top = [ctrlBoxHTML(players[net.pi].slot, 0, `YOU · ${teamName(players[net.pi].side)}`)];
+    const who = players.map((p, i) => `<span style="color:${p.color}">&#9679;</span> ${i === net.pi ? "You" : (i === 0 ? "Host" : "Player " + (i + 1))}`).join("<br>");
+    bot2 = [`<div class="ctrl-box sp-${sport}" style="--c:#8a8a8a;--c2:#4a4a4a"><div class="cb-title">ROOM ${net.code}</div><div class="cb-note">${who}<br><br>The match starts when everyone is ready.</div></div>`];
+  } else if (gameMode === 1) {
     top = [ctrlBoxHTML(0, 0, `PLAYER 1 · ${t0}`)];
     bot2 = [bot ? botBoxHTML() : ctrlBoxHTML(2, 1, `PLAYER 2 · ${t1}`)];
   } else {
@@ -726,6 +775,7 @@ function openCover() {
 }
 function closeCover() {
   coverOpen = false; briefingOpen = false;
+  netMarkReady();
   const el = document.getElementById("ctrlCover");
   el.classList.remove("in");
   clearTimeout(coverTimer);
@@ -858,12 +908,14 @@ function botControl() {
 
 // Practice questions - attempt before reading the solution.
 function backToMenu() {
+  netLeave();
   gameStarted = false;
   hideStats();
   setPaused(false);
   hideBriefing();
   document.getElementById("menu").style.display = "flex";
   showModeStep();
+  if (netNote) { showStep("onlineStep"); document.getElementById("netMsg").textContent = netNote; netNote = ""; }
   document.getElementById("gameArea").style.display = "none";
   for (const key in keys) keys[key] = false;
   for (const key in pressed) delete pressed[key];
@@ -880,6 +932,8 @@ function restartBall(scoringSide) {
 
 // Revision tip: repeat difficult topics at spaced intervals.
 function restart() {
+  if (net && net.role === "guest") return;
+  if (net) netRelay({ k: "rematch" });
   puReset(); score1 = 0; score2 = 0; gameOver = false; particles = [];
   resetStats(); hideStats();
   setPaused(false);
@@ -911,6 +965,7 @@ function awardPoint(winnerSide) {
 
 // Mnemonic to help remember this section.
 function createParticles(x, y, color, count = 12) {
+  if (net && net.role === "host" && net.ev.length < 120) net.ev.push(["p", x, y, color, count]);
   if (!settings.particles) return;
   for (let i = 0; i < count; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, life: 30, color });
 }
@@ -1081,14 +1136,14 @@ function resetStats() { stats = [newSide(), newSide()]; rally = 0; longestRally 
 function fmtTime(ticks) { const sec = Math.floor(ticks / 60); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
 function showStats() {
   const S = SPORTS[sport];
-  document.getElementById("statsTitle").textContent = (score1 > score2 ? teamName(0) : teamName(1)) + " WINS!";
+  document.getElementById("statsTitle").textContent = (score1 > score2 ? teamName(0) : teamName(1)) + (gameMode === 2 ? " TEAM" : "") + " WINS!";
   const rows = [["Points", "points"], ["Aces", "aces"], ["Total hits", "hits"], ["Attacks (" + S.spikeName.toLowerCase() + "s)", "attacks"], [S.setName.charAt(0) + S.setName.slice(1).toLowerCase() + " shots", "sets"]];
   if (sport === "badminton") { rows.push(["Drop shots", "drops"]); rows.push(["Best smash streak", "bestStreak"]); }
   if (sport === "basketball") { rows.length = 0; rows.push(["Points", "points"], ["Shots made", "made"], ["Shots taken", "shots"], ["3-pointers made", "threes"], ["Steals", "steals"], ["Blocks", "blocks"], ["Shoves landed", "shoves"]); }
   const cap = t => t.charAt(0) + t.slice(1).toLowerCase();
   const teamNames = gameMode === 1 ? (bot ? ["You", "Bot"] : [cap(teamName(0)), cap(teamName(1))]) : [cap(teamName(0)) + " team", cap(teamName(1)) + " team"];
   let html = '<div class="stat-note">Final score ' + score1 + " - " + score2 + "</div>";
-  html += '<table class="stat-table"><tr><th></th><th style="color:' + settings.colors[0] + '">' + teamNames[0] + '</th><th style="color:' + settings.colors[2] + '">' + teamNames[1] + "</th></tr>";
+  html += '<table class="stat-table"><tr><th></th><th style="color:' + cols()[0] + '">' + teamNames[0] + '</th><th style="color:' + cols()[2] + '">' + teamNames[1] + "</th></tr>";
   rows.forEach(r => {
     const a = stats[0][r[1]], b = stats[1][r[1]];
     html += "<tr><td>" + r[0] + '</td><td class="' + (a > b ? "lead" : "") + '">' + a + '</td><td class="' + (b > a ? "lead" : "") + '">' + b + "</td></tr>";
@@ -1096,6 +1151,7 @@ function showStats() {
   html += "</table>";
   html += '<div class="stat-note">' + (sport === "basketball" ? "" : "Longest rally: <b>" + longestRally + " hits</b> &nbsp;·&nbsp; ") + "Match time: <b>" + fmtTime(matchTicks) + "</b></div>";
   document.getElementById("statsBody").innerHTML = html;
+  document.getElementById("statsAgain").textContent = net && net.role === "guest" ? "WAITING FOR HOST..." : "PLAY AGAIN";
   document.getElementById("statsView").style.display = "flex";
   statsOpen = true;
   for (const k in keys) keys[k] = false;
@@ -1868,6 +1924,7 @@ function updateParticles() {
 // Illustrations for each chapter: a painted backdrop per topic and a crowd of onlookers.
 let crowdUntil = 0;
 function cheerCrowd(ms) {
+  if (net && net.role === "host" && net.ev.length < 120) net.ev.push(["c", ms]);
   crowdUntil = performance.now() + ms;
   hiss(Math.min(1.4, ms / 1200), 0.07, 1400); hiss(Math.min(1.4, ms / 1200), 0.05, 700, 0.1);
 }
@@ -2385,7 +2442,7 @@ function drawPaused() {
 function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = "#ffd166"; ctx.font = "bold 48px Arial"; ctx.textAlign = "center";
-  ctx.fillText((score1 > score2 ? teamName(0) : teamName(1)) + " WINS!", WIDTH / 2, 250);
+  ctx.fillText((score1 > score2 ? teamName(0) : teamName(1)) + (gameMode === 2 ? " TEAM" : "") + " WINS!", WIDTH / 2, 250);
 }
 
 // Past-paper style question for self-assessment.
@@ -2406,6 +2463,7 @@ function draw() {
   if (shaking) ctx.restore();
   if (gameOver) drawGameOver();
   if (paused) drawPaused();
+  if (net && gameStarted && !net.go && !briefingOpen) drawWaiting();
 }
 
 // Bonus review cards: now and then a mystery box offers a one-off study aid (1 vs 1 only).
@@ -2880,15 +2938,283 @@ function loop(t = 0) {
   acc += Math.min(t - lastTime, 100);
   lastTime = t;
   while (acc >= STEP) {
-    if (gameStarted && !briefingOpen && !paused && !gameOver) {
+    if (net && net.role === "guest") netGuestStep();
+    else if (gameStarted && !briefingOpen && !paused && !gameOver && (!net || net.go)) {
       matchTicks++; gatherInputs(); botControl(); puInputs(); movePlayers(); if (sport === "basketball") updateBasketball(); else updateBall(); updateParticles(); puUpdate();
     }
     for (const key in pressed) delete pressed[key];
     acc -= STEP;
   }
+  netPump();
   draw();
   requestAnimationFrame(loop);
 }
+// ---- Group study sessions: one person opens a room and friends join with its code ----
+// The host runs the match, joiners send their keys, and the host sends back the picture about 30 times a second.
+// Where the room server lives. Set this once (for example "study-rooms.onrender.com") and the address box disappears for everyone.
+const DEFAULT_SERVER = "studymobileapp.onrender.com";
+const NET_SKIP = { in: 1, map: 1, px: 1, walkT: 1, walkN: 1, moving: 1, wasAir: 1, lastVy: 1, sq: 1 };
+const NET_NAMES = ["Host", "Player 2", "Player 3", "Player 4"];
+let netNote = "";
+function cols() { return net && net.colors ? net.colors : settings.colors; }
+function netR(v) { return typeof v === "number" ? Math.round(v * 100) / 100 : v; }
+function netObj(o) { const r = {}; for (const k in o) { if (NET_SKIP[k]) continue; r[k] = netR(o[k]); } return r; }
+function netSend(o) { if (net && net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(o, (k, v) => (k === "in" || k === "map") ? undefined : v)); }
+function netRelay(d, to) { netSend(to === undefined ? { t: "m", d } : { t: "m", to, d }); }
+function netEl(id) { return document.getElementById(id); }
+
+function netUrl() {
+  const box = netEl("netServer");
+  let v = DEFAULT_SERVER || box.value.trim();
+  if (!DEFAULT_SERVER) { try { localStorage.setItem("sg-server", v); } catch (e) {} }
+  if (!v) { if (location.protocol === "http:" || location.protocol === "https:") v = location.host; else throw new Error("no server"); }
+  v = v.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(v)) v = v.replace(/^http/i, "ws");
+  else if (!/^wss?:\/\//i.test(v)) v = (/^(localhost|127\.|192\.168\.|10\.)/.test(v) ? "ws://" : "wss://") + v;
+  return v;
+}
+function openOnline() {
+  const box = netEl("netServer");
+  box.style.display = DEFAULT_SERVER ? "none" : "block";
+  if (!box.value) { try { box.value = localStorage.getItem("sg-server") || ""; } catch (e) {} }
+  netEl("netMsg").textContent = "";
+  showStep("onlineStep");
+}
+function netConnect(kind) {
+  const msg = netEl("netMsg");
+  const code = netEl("netCode").value.trim().toUpperCase();
+  if (kind === "join" && code.length !== 4) { msg.textContent = "Type the 4-letter room code first."; return; }
+  let url;
+  try { url = netUrl(); } catch (e) { msg.textContent = "Online play is not set up on this page yet."; return; }
+  netLeave();
+  msg.textContent = "Connecting...";
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { msg.textContent = "That server address does not look right."; return; }
+  net = { ws, role: kind === "create" ? "host" : "guest", code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
+    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, savedPU: settings.powerups, lastIn: "", inTick: 0 };
+  ws.onopen = () => netSend(kind === "create" ? { t: "create" } : { t: "join", code });
+  ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
+  ws.onerror = () => { if (net && net.ws === ws && !net.code) { msg.textContent = "Could not reach the server."; netLeave(); } };
+  ws.onclose = () => {
+    if (!net || net.ws !== ws) return;
+    if (!net.code) { msg.textContent = "Could not reach the server."; netLeave(); return; }
+    netGone("Connection lost.");
+  };
+}
+function netLeave() {
+  if (!net) return;
+  const n = net; net = null;
+  try { n.ws.onclose = null; n.ws.onerror = null; n.ws.close(); } catch (e) {}
+  settings.powerups = n.savedPU;
+  netEl("restartBtn").style.display = "";
+}
+function netGone(text) { netNote = text; backToMenu(); }
+
+function netOnMsg(m) {
+  if (!net) return;
+  if (m.t === "created") { net.code = m.code; net.me = 0; net.roster[0] = true; netShowLobby(); return; }
+  if (m.t === "joined") { net.code = m.code; net.me = m.slot; netShowLobby(); return; }
+  if (m.t === "err") { netEl("netMsg").textContent = m.m; netLeave(); return; }
+  if (m.t === "closed") { netGone("The host closed the room."); return; }
+  if (net.role === "host") {
+    if (m.t === "join") { net.roster[m.slot] = true; netLobbyUpdate(); }
+    else if (m.t === "left") {
+      net.roster[m.slot] = false; delete net.rin[net.pidx[m.slot]];
+      if (net.started) netHostToLobby("A player left, so the match ended.");
+      else netLobbyUpdate();
+    }
+    else if (m.t === "m" && m.d) {
+      const d = m.d;
+      if (d.k === "in" && net.started) {
+        const i = net.pidx[m.from]; if (i === undefined) return;
+        const r = net.rin[i] || (net.rin[i] = { j: 0, sl: 0, se: 0, sp: 0 });
+        r.l = d.l; r.r = d.r; r.sh = d.sh; r.kh = d.kh; r.j |= d.j; r.sl |= d.sl; r.se |= d.se; r.sp |= d.sp;
+      } else if (d.k === "ready" && net.started) { net.ready[m.from] = true; netCheckGo(); }
+    }
+    return;
+  }
+  if (m.t === "m" && m.d) {
+    const d = m.d;
+    if (d.k === "snap") netApply(d);
+    else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; if (!net.started) netRenderLobby(); }
+    else if (d.k === "start") netGuestStart(d);
+    else if (d.k === "rematch") { hideStats(); particles = []; dust = []; gameOver = false; }
+    else if (d.k === "tolobby") netGuestToLobby(d.note);
+  }
+}
+
+// ---- lobby ----
+function netShowLobby() {
+  document.getElementById("menu").style.display = "flex";
+  showStep("lobbyStep");
+  netRenderLobby();
+}
+function netCount() { return net.roster.filter(Boolean).length; }
+function netRenderLobby() {
+  if (!net) return;
+  netEl("lobbyCode").textContent = net.code;
+  const need = net.mode === 2 ? 4 : 2, have = netCount(), host = net.role === "host";
+  let h = "";
+  for (let i = 0; i < 4; i++) {
+    if (net.mode === 1 && i > 1 && !net.roster[i]) continue;
+    const on = net.roster[i];
+    h += `<div class="lobby-row${on ? " on" : ""}"><span>${on ? "●" : "○"} ${NET_NAMES[i]}${i === net.me ? " (you)" : ""}</span><span>${on ? "ready to play" : "waiting..."}</span></div>`;
+  }
+  netEl("lobbyList").innerHTML = h;
+  const nm = { volleyball: "Volleyball", badminton: "Badminton", basketball: "Basketball" };
+  netEl("lobbyHost").style.display = host ? "block" : "none";
+  netEl("lobbyGuest").style.display = host ? "none" : "block";
+  if (host) {
+    ["m1", "m2"].forEach((id, i) => netEl(id).classList.toggle("on", net.mode === i + 1));
+    ["volleyball", "badminton", "basketball"].forEach(s => netEl("sp_" + s).classList.toggle("on", net.sport === s));
+    const btn = netEl("lobbyStart");
+    btn.disabled = have !== need;
+    btn.textContent = have === need ? "START MATCH" : `WAITING FOR PLAYERS (${have}/${need})`;
+  } else {
+    netEl("lobbyGuest").textContent = `Waiting for the host to start: ${nm[net.sport]}, ${net.mode === 2 ? "2 vs 2" : "1 vs 1"}.`;
+  }
+}
+function netLobbyUpdate() { netRenderLobby(); netRelay({ k: "lobby", roster: net.roster, mode: net.mode, sport: net.sport }); }
+function netSetMode(m) { if (net && net.role === "host") { net.mode = m; netLobbyUpdate(); } }
+function netSetSport(s) { if (net && net.role === "host") { net.sport = s; netLobbyUpdate(); } }
+function netCopyCode() { try { navigator.clipboard.writeText(net.code); netEl("lobbyNote").textContent = "Code copied."; } catch (e) {} }
+
+function netSetup(mode, sp) {
+  bot = null; pendingBot = null;
+  hideStats(); hideBriefing();
+  setupGameScreen(mode, sp);
+  players.forEach(p => { p.map = toMap(settings.binds[0]); p.bindSlot = 0; });
+  gameStarted = true; gameOver = false;
+  net.started = true; net.go = false; net.lastSnap = 0; net.ev = []; net.rin = {}; net.lastIn = "";
+  netEl("restartBtn").style.display = net.role === "guest" ? "none" : "";
+  restartBall(Math.random() < 0.5 ? 0 : 1);
+  updateControls();
+}
+function netStart() {
+  if (!net || net.role !== "host") return;
+  const need = net.mode === 2 ? 4 : 2, slots = [];
+  net.roster.forEach((on, i) => { if (on) slots.push(i); });
+  if (slots.length !== need) return;
+  net.pidx = {}; net.ready = {};
+  slots.forEach((s, i) => { net.pidx[s] = i; net.ready[s] = false; });
+  net.colors = settings.colors.slice(); net.pi = 0;
+  netSend({ t: "lock", v: true });
+  netSetup(net.mode, net.sport);
+  netRelay({ k: "start", mode: net.mode, sport: net.sport, colors: net.colors, pu: settings.powerups, pidx: net.pidx });
+  openCover();
+}
+function netGuestStart(d) {
+  net.colors = d.colors; net.pidx = d.pidx; net.pi = d.pidx[net.me]; net.mode = d.mode; net.sport = d.sport;
+  settings.powerups = d.pu;
+  netSetup(d.mode, d.sport);
+  openCover();
+}
+function netMarkReady() {
+  if (!net || !net.started || net.go) return;
+  if (net.role === "host") { net.ready[0] = true; netCheckGo(); } else netRelay({ k: "ready" });
+}
+function netCheckGo() {
+  if (net.go) return;
+  if (Object.keys(net.ready).every(k => net.ready[k])) { net.go = true; net.rin = {}; }
+}
+function netToLobbyScreen(note) {
+  gameStarted = false; net.started = false; net.go = false;
+  hideStats(); hideBriefing(); setPaused(false);
+  netEl("restartBtn").style.display = "";
+  document.getElementById("menu").style.display = "flex";
+  document.getElementById("gameArea").style.display = "none";
+  showStep("lobbyStep");
+  netEl("lobbyNote").textContent = note || "";
+  netRenderLobby();
+}
+function netHostToLobby(note) {
+  netSend({ t: "lock", v: false });
+  netToLobbyScreen(note);
+  netRelay({ k: "tolobby", note });
+  netLobbyUpdate();
+}
+function netGuestToLobby(note) { netToLobbyScreen(note); }
+
+// ---- during a match ----
+function netApplyRemote(p, i) {
+  const r = net.rin[i], n = p.in;
+  if (!r) { n.left = n.right = n.jump = n.slide = n.set = n.spike = n.setHeld = n.spikeHeld = false; return; }
+  n.left = !!r.l; n.right = !!r.r; n.setHeld = !!r.sh; n.spikeHeld = !!r.kh;
+  n.jump = !!r.j; n.slide = !!r.sl; n.set = !!r.se; n.spike = !!r.sp;
+  r.j = r.sl = r.se = r.sp = 0;
+}
+function netSnap() {
+  const ev = net.ev; net.ev = [];
+  const now = performance.now();
+  return { k: "snap", go: net.go, tk: matchTicks, s1: score1, s2: score2, over: gameOver,
+    ball: netObj(ball), P: players.map(netObj), hold: holder, shotBy, shotPts, shotLive, shotAge, sw: scoreWait, sws: scoreWaitSide,
+    dk: dunkShot, dp: dunkPop, shk2: shockFx, tr: ballTrail.map(t => ({ x: netR(t.x), y: netR(t.y) })), pu,
+    tc: touches, lh: lastHitSide, sip: serveInProgress, sht: serveHit, ss: servingSide, sm: smashStreak, so: streakOwner,
+    nt: notice ? { text: notice.text, left: Math.max(0, Math.round(notice.until - now)) } : null,
+    shk: Math.max(0, Math.round(shakeUntil - now)), shm: shakeMag, st: stats, ra: rally, lr: longestRally, ev };
+}
+function netPump() {
+  if (!net || net.role !== "host" || !net.started) return;
+  const now = performance.now();
+  if (now - net.lastSnap < 30) return;
+  net.lastSnap = now;
+  netRelay(netSnap());
+}
+function netApply(s) {
+  if (!net || net.role !== "guest" || !net.started || !players.length) return;
+  net.go = s.go; matchTicks = s.tk; score1 = s.s1; score2 = s.s2; updateScore();
+  s.P.forEach((o, i) => {
+    const p = players[i]; if (!p) return;
+    const x = o.x, y = o.y; delete o.x; delete o.y;
+    Object.assign(p, o);
+    if (p.tx === undefined || Math.abs(p.x - x) > 120 || Math.abs(p.y - y) > 120) { p.x = x; p.y = y; }
+    p.tx = x; p.ty = y;
+  });
+  { const o = s.ball, x = o.x, y = o.y; delete o.x; delete o.y; Object.assign(ball, o); if (ball.tx === undefined || Math.abs(ball.x - x) > 150 || Math.abs(ball.y - y) > 150) { ball.x = x; ball.y = y; } ball.tx = x; ball.ty = y; }
+  holder = s.hold; shotBy = s.shotBy; shotPts = s.shotPts; shotLive = s.shotLive; shotAge = s.shotAge; scoreWait = s.sw; scoreWaitSide = s.sws;
+  dunkShot = s.dk; dunkPop = s.dp; shockFx = s.shk2; ballTrail = s.tr;
+  pu = s.pu; pu.clones.forEach(c => { c.in = newInput(); });
+  touches = s.tc; lastHitSide = s.lh; serveInProgress = s.sip; serveHit = s.sht; servingSide = s.ss; smashStreak = s.sm; streakOwner = s.so;
+  const now = performance.now();
+  notice = s.nt ? { text: s.nt.text, until: now + s.nt.left } : null;
+  shakeUntil = now + s.shk; shakeMag = s.shm;
+  stats = s.st; rally = s.ra; longestRally = s.lr;
+  s.ev.forEach(e => {
+    try {
+      if (e[0] === "s") sfx[e[1]](...e.slice(2));
+      else if (e[0] === "u") puSfx[e[1]](...e.slice(2));
+      else if (e[0] === "p") createParticles(e[1], e[2], e[3], e[4]);
+      else if (e[0] === "c") cheerCrowd(e[1]);
+    } catch (err) {}
+  });
+  if (s.over && !gameOver) { gameOver = true; showStats(); }
+  else if (!s.over && gameOver) { gameOver = false; hideStats(); }
+}
+// Guests do not simulate: they read their own keys, send them to the host and glide toward the host's latest picture.
+function netGuestStep() {
+  if (!gameStarted || !players.length) return;
+  const p = players[net.pi]; if (!p) return;
+  readKeys(p, p.map);
+  const n = p.in;
+  const o = { k: "in", l: +n.left, r: +n.right, sh: +n.setHeld, kh: +n.spikeHeld, j: +n.jump, sl: +n.slide, se: +n.set, sp: +n.spike };
+  const key = [o.l, o.r, o.sh, o.kh, o.j, o.sl, o.se, o.sp].join("");
+  if (key !== net.lastIn || ++net.inTick >= 30) { net.lastIn = key; net.inTick = 0; netRelay(o); }
+  players.forEach(q => { if (q.tx !== undefined) { q.x += (q.tx - q.x) * 0.5; q.y += (q.ty - q.y) * 0.5; } });
+  if (ball.tx !== undefined) { ball.x += (ball.tx - ball.x) * 0.6; ball.y += (ball.ty - ball.y) * 0.6; }
+  updateParticles();
+}
+function drawWaiting() {
+  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillStyle = "#ffd166"; ctx.font = "bold 34px Arial"; ctx.textAlign = "center";
+  ctx.fillText("Waiting for everyone to get ready...", WIDTH / 2, 235);
+}
+// Group study sound effects: the host records each one and the others replay it.
+[[sfx, "s"], [puSfx, "u"]].forEach(([o, tag]) => {
+  Object.keys(o).forEach(k => {
+    const f = o[k]; if (typeof f !== "function") return;
+    o[k] = function (...a) { if (net && net.role === "host" && net.ev.length < 120) net.ev.push([tag, k, ...a]); return f.apply(this, a); };
+  });
+});
 syncSound(); applyHints();
 requestAnimationFrame(loop);
 </script>
