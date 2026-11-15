@@ -193,6 +193,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 <h1 id="statsTitle"></h1>
 <div id="statsBody"></div>
 <button class="menu-button" id="statsAgain" onclick="restart()">PLAY AGAIN</button>
+<button class="menu-button" id="statsLobby" style="display:none" onclick="netBackToLobby()">CHANGE SPORT OR MODE</button>
 <button class="menu-button back-button" onclick="backToMenu()">MAIN MENU</button>
 </div>
 </div>
@@ -1175,6 +1176,7 @@ function showStats() {
   html += '<div class="stat-note">' + (sport === "basketball" ? "" : "Longest rally: <b>" + longestRally + " hits</b> &nbsp;·&nbsp; ") + "Match time: <b>" + fmtTime(matchTicks) + "</b></div>";
   document.getElementById("statsBody").innerHTML = html;
   document.getElementById("statsAgain").textContent = net && net.role === "guest" ? "WAITING FOR HOST..." : "PLAY AGAIN";
+  document.getElementById("statsLobby").style.display = net && net.role === "host" ? "block" : "none";
   document.getElementById("statsView").style.display = "flex";
   statsOpen = true;
   for (const k in keys) keys[k] = false;
@@ -2487,6 +2489,7 @@ function draw() {
   if (gameOver) drawGameOver();
   if (paused) drawPaused();
   if (net && gameStarted && !net.go && !briefingOpen) drawWaiting();
+  if (net && net.started) drawNetInfo();
 }
 
 // Bonus review cards: now and then a mystery box offers a one-off study aid (1 vs 1 only).
@@ -2962,7 +2965,7 @@ function loop(t = 0) {
   lastTime = t;
   while (acc >= STEP) {
     if (net && net.role === "guest") netGuestStep();
-    else if (gameStarted && !briefingOpen && !paused && !gameOver && (!net || net.go)) {
+    else if (gameStarted && (!briefingOpen || net) && !paused && !gameOver && (!net || net.go)) {
       matchTicks++; gatherInputs(); botControl(); puInputs(); movePlayers(); if (sport === "basketball") updateBasketball(); else updateBall(); updateParticles(); puUpdate();
     }
     for (const key in pressed) delete pressed[key];
@@ -3014,7 +3017,8 @@ function netConnect(kind) {
   let ws;
   try { ws = new WebSocket(url); } catch (e) { msg.textContent = "That server address does not look right."; return; }
   net = { ws, role: kind === "create" ? "host" : "guest", code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
-    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0 };
+    started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0,
+    dc: {}, pc: {}, iceq: {}, last: {}, snapSeq: 0, gotSeq: 0, inSeq: 0, cnt: { j: 0, s: 0, e: 0, p: 0 }, burst: 0, pingTick: 0, rtt: 0, gpc: null, dcu: null, dcr: null, gice: [] };
   ws.onopen = () => netSend(kind === "create" ? { t: "create" } : { t: "join", code });
   ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
   ws.onerror = () => { if (net && net.ws === ws && !net.code) { msg.textContent = "Could not reach the server."; netLeave(); } };
@@ -3027,6 +3031,7 @@ function netConnect(kind) {
 function netLeave() {
   if (!net) return;
   const n = net; net = null;
+  try { Object.keys(n.pc).forEach(s => n.pc[s].close()); if (n.gpc) n.gpc.close(); } catch (e) {}
   try { n.ws.onclose = null; n.ws.onerror = null; n.ws.close(); } catch (e) {}
   settings.powerups = n.savedPU;
   netEl("restartBtn").style.display = "";
@@ -3040,30 +3045,91 @@ function netOnMsg(m) {
   if (m.t === "err") { netEl("netMsg").textContent = m.m; netLeave(); return; }
   if (m.t === "closed") { netGone("The host closed the room."); return; }
   if (net.role === "host") {
-    if (m.t === "join") { net.roster[m.slot] = true; netLobbyUpdate(); }
+    if (m.t === "join") { net.roster[m.slot] = true; netP2PHost(m.slot); netLobbyUpdate(); }
     else if (m.t === "left") {
-      net.roster[m.slot] = false; delete net.rin[net.pidx[m.slot]];
+      net.roster[m.slot] = false; delete net.rin[net.pidx[m.slot]]; netP2PDrop(m.slot);
       if (net.started) netHostToLobby("A player left, so the match ended.");
       else netLobbyUpdate();
     }
-    else if (m.t === "m" && m.d) {
-      const d = m.d;
-      if (d.k === "in" && net.started) {
-        const i = net.pidx[m.from]; if (i === undefined) return;
-        const r = net.rin[i] || (net.rin[i] = { j: 0, sl: 0, se: 0, sp: 0 });
-        r.l = d.l; r.r = d.r; r.sh = d.sh; r.kh = d.kh; r.j |= d.j; r.sl |= d.sl; r.se |= d.se; r.sp |= d.sp;
-      } else if (d.k === "ready" && net.started) { net.ready[m.from] = true; netCheckGo(); }
-    }
+    else if (m.t === "m" && m.d) netHostGot(m.from, m.d);
     return;
   }
-  if (m.t === "m" && m.d) {
-    const d = m.d;
-    if (d.k === "snap") netApply(d);
-    else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; net.pu = !!d.pu; if (!net.started) netRenderLobby(); }
-    else if (d.k === "start") netGuestStart(d);
-    else if (d.k === "rematch") { hideStats(); particles = []; dust = []; gameOver = false; }
-    else if (d.k === "tolobby") netGuestToLobby(d.note);
-  }
+  if (m.t === "m" && m.d) netGuestGot(m.d);
+}
+// Messages reach the host and the others either straight over a peer connection (fast) or through the room server (backup).
+const NET_REPL = (k, v) => (k === "in" || k === "map") ? undefined : v;
+const RTC_CFG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
+function netDcSend(ch, o) {
+  if (!ch || ch.readyState !== "open") return false;
+  try { ch.send(typeof o === "string" ? o : JSON.stringify(o, NET_REPL)); return true; } catch (e) { return false; }
+}
+function netToGuest(slot, o) { const e = net.dc[slot]; if (!(e && netDcSend(e.u, o))) netRelay(o, slot); }
+function netGuestSend(o) { if (!netDcSend(net.dcu, o)) netRelay(o); }
+function netP2PHost(slot) {
+  if (typeof RTCPeerConnection === "undefined" || net.pc[slot]) return;
+  try {
+    const pc = new RTCPeerConnection(RTC_CFG), ent = { u: null, r: null };
+    net.pc[slot] = pc; net.dc[slot] = ent;
+    const u = pc.createDataChannel("u", { ordered: false, maxRetransmits: 0 }), r = pc.createDataChannel("r");
+    [[u, "u"], [r, "r"]].forEach(([ch, k]) => {
+      ch.onopen = () => { ent[k] = ch; };
+      ch.onclose = () => { if (ent[k] === ch) ent[k] = null; };
+      ch.onmessage = e => { try { netHostGot(slot, JSON.parse(e.data)); } catch (err) {} };
+    });
+    pc.onicecandidate = e => { if (e.candidate && net && net.pc[slot] === pc) netRelay({ k: "rtc", ice: e.candidate }, slot); };
+    pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => { if (net && net.pc[slot] === pc) netRelay({ k: "rtc", sdp: pc.localDescription }, slot); }).catch(() => {});
+  } catch (e) {}
+}
+function netP2PAnswer(from, d) {
+  const pc = net.pc[from]; if (!pc) return;
+  if (d.sdp) pc.setRemoteDescription(d.sdp).then(() => { (net.iceq[from] || []).splice(0).forEach(c => pc.addIceCandidate(c).catch(() => {})); }).catch(() => {});
+  else if (d.ice) { if (pc.remoteDescription) pc.addIceCandidate(d.ice).catch(() => {}); else (net.iceq[from] = net.iceq[from] || []).push(d.ice); }
+}
+function netP2PDrop(slot) { try { if (net.pc[slot]) net.pc[slot].close(); } catch (e) {} delete net.pc[slot]; delete net.dc[slot]; delete net.iceq[slot]; }
+function netP2PGuest(d) {
+  if (typeof RTCPeerConnection === "undefined") return;
+  try {
+    if (!net.gpc) {
+      const pc = net.gpc = new RTCPeerConnection(RTC_CFG);
+      pc.onicecandidate = e => { if (e.candidate && net && net.gpc === pc) netRelay({ k: "rtc", ice: e.candidate }); };
+      pc.ondatachannel = ev => {
+        const ch = ev.channel, key = ch.label === "u" ? "dcu" : "dcr";
+        const up = () => { if (net && net.gpc === pc) net[key] = ch; };
+        ch.onopen = up; if (ch.readyState === "open") up();
+        ch.onclose = () => { if (net && net[key] === ch) net[key] = null; };
+        ch.onmessage = e => { try { netGuestGot(JSON.parse(e.data)); } catch (err) {} };
+      };
+    }
+    const pc = net.gpc;
+    if (d.sdp) pc.setRemoteDescription(d.sdp).then(() => { net.gice.splice(0).forEach(c => pc.addIceCandidate(c).catch(() => {})); return pc.createAnswer(); }).then(a => pc.setLocalDescription(a)).then(() => netRelay({ k: "rtc", sdp: pc.localDescription })).catch(() => {});
+    else if (d.ice) { if (pc.remoteDescription) pc.addIceCandidate(d.ice).catch(() => {}); else net.gice.push(d.ice); }
+  } catch (e) {}
+}
+function netHostGot(from, d) {
+  if (!net || net.role !== "host") return;
+  if (d.k === "rtc") { netP2PAnswer(from, d); return; }
+  if (d.k === "ping") { netToGuest(from, { k: "pong", t: d.t }); return; }
+  if (!net.started) return;
+  if (d.k === "in") {
+    const i = net.pidx[from]; if (i === undefined) return;
+    let r = net.rin[i];
+    if (!r) r = net.rin[i] = { j: 0, sl: 0, se: 0, sp: 0, q: 0, cj: d.cj, cs: d.cs, ce: d.ce, cp: d.cp };
+    if (d.q <= r.q) return;
+    r.q = d.q; r.l = d.l; r.r = d.r; r.sh = d.sh; r.kh = d.kh;
+    if (d.cj > r.cj) r.j = 1; if (d.cs > r.cs) r.sl = 1; if (d.ce > r.ce) r.se = 1; if (d.cp > r.cp) r.sp = 1;
+    r.cj = d.cj; r.cs = d.cs; r.ce = d.ce; r.cp = d.cp;
+  } else if (d.k === "ready") { net.ready[from] = true; netCheckGo(); }
+}
+function netGuestGot(d) {
+  if (!net || net.role !== "guest") return;
+  if (d.k === "snap") { if (d.q <= net.gotSeq) return; net.gotSeq = d.q; netApply(d); }
+  else if (d.k === "ev") netEv(d.ev);
+  else if (d.k === "pong") { const r = performance.now() - d.t; net.rtt = net.rtt ? net.rtt * 0.7 + r * 0.3 : r; }
+  else if (d.k === "rtc") netP2PGuest(d);
+  else if (d.k === "lobby") { net.roster = d.roster; net.mode = d.mode; net.sport = d.sport; net.pu = !!d.pu; if (!net.started) netRenderLobby(); }
+  else if (d.k === "start") netGuestStart(d);
+  else if (d.k === "rematch") { hideStats(); particles = []; dust = []; gameOver = false; }
+  else if (d.k === "tolobby") netGuestToLobby(d.note);
 }
 
 // ---- lobby ----
@@ -3144,7 +3210,7 @@ function netMarkReady() {
 }
 function netCheckGo() {
   if (net.go) return;
-  if (Object.keys(net.ready).every(k => net.ready[k])) { net.go = true; net.rin = {}; }
+  if (Object.keys(net.ready).every(k => net.ready[k])) { net.go = true; Object.values(net.rin).forEach(r => { r.j = r.sl = r.se = r.sp = 0; }); }
 }
 function netToLobbyScreen(note) {
   gameStarted = false; net.started = false; net.go = false;
@@ -3162,6 +3228,7 @@ function netHostToLobby(note) {
   netRelay({ k: "tolobby", note });
   netLobbyUpdate();
 }
+function netBackToLobby() { if (net && net.role === "host") netHostToLobby(""); }
 function netGuestToLobby(note) { netToLobbyScreen(note); }
 
 // ---- during a match ----
@@ -3173,21 +3240,35 @@ function netApplyRemote(p, i) {
   r.j = r.sl = r.se = r.sp = 0;
 }
 function netSnap() {
-  const ev = net.ev; net.ev = [];
   const now = performance.now();
-  return { k: "snap", go: net.go, tk: matchTicks, s1: score1, s2: score2, over: gameOver,
+  return { k: "snap", q: ++net.snapSeq, go: net.go, tk: matchTicks, s1: score1, s2: score2, over: gameOver,
     ball: netObj(ball), P: players.map(netObj), hold: holder, shotBy, shotPts, shotLive, shotAge, sw: scoreWait, sws: scoreWaitSide,
     dk: dunkShot, dp: dunkPop, shk2: shockFx, tr: ballTrail.map(t => ({ x: netR(t.x), y: netR(t.y) })), pu,
     tc: touches, lh: lastHitSide, sip: serveInProgress, sht: serveHit, ss: servingSide, sm: smashStreak, so: streakOwner,
     nt: notice ? { text: notice.text, left: Math.max(0, Math.round(notice.until - now)) } : null,
-    shk: Math.max(0, Math.round(shakeUntil - now)), shm: shakeMag, st: stats, ra: rally, lr: longestRally, ev };
+    shk: Math.max(0, Math.round(shakeUntil - now)), shm: shakeMag, st: stats, ra: rally, lr: longestRally };
 }
 function netPump() {
   if (!net || net.role !== "host" || !net.started) return;
-  const now = performance.now();
-  if (now - net.lastSnap < 30) return;
-  net.lastSnap = now;
-  netRelay(netSnap());
+  const now = performance.now(), slots = Object.keys(net.pidx).map(Number).filter(s => s !== 0);
+  if (net.ev.length) {
+    const ev = net.ev; net.ev = [];
+    slots.forEach(s => { const e = net.dc[s]; if (!(e && netDcSend(e.r, { k: "ev", ev }))) netRelay({ k: "ev", ev }, s); });
+  }
+  const due = slots.filter(s => { const e = net.dc[s], fast = e && e.u && e.u.readyState === "open" && net.mode === 1; return now - (net.last[s] || 0) >= (fast ? 14 : 30); });
+  if (!due.length) return;
+  const snap = netSnap(), str = JSON.stringify(snap, NET_REPL);
+  due.forEach(s => { net.last[s] = now; const e = net.dc[s]; if (!(e && netDcSend(e.u, str))) netRelay(snap, s); });
+}
+function netEv(list) {
+  list.forEach(e => {
+    try {
+      if (e[0] === "s") sfx[e[1]](...e.slice(2));
+      else if (e[0] === "u") puSfx[e[1]](...e.slice(2));
+      else if (e[0] === "p") createParticles(e[1], e[2], e[3], e[4]);
+      else if (e[0] === "c") cheerCrowd(e[1]);
+    } catch (err) {}
+  });
 }
 function netApply(s) {
   if (!net || net.role !== "guest" || !net.started || !players.length) return;
@@ -3208,14 +3289,6 @@ function netApply(s) {
   notice = s.nt ? { text: s.nt.text, until: now + s.nt.left } : null;
   shakeUntil = now + s.shk; shakeMag = s.shm;
   stats = s.st; rally = s.ra; longestRally = s.lr;
-  s.ev.forEach(e => {
-    try {
-      if (e[0] === "s") sfx[e[1]](...e.slice(2));
-      else if (e[0] === "u") puSfx[e[1]](...e.slice(2));
-      else if (e[0] === "p") createParticles(e[1], e[2], e[3], e[4]);
-      else if (e[0] === "c") cheerCrowd(e[1]);
-    } catch (err) {}
-  });
   if (s.over && !gameOver) { gameOver = true; showStats(); }
   else if (!s.over && gameOver) { gameOver = false; hideStats(); }
 }
@@ -3224,13 +3297,26 @@ function netGuestStep() {
   if (!gameStarted || !players.length) return;
   const p = players[net.pi]; if (!p) return;
   readKeys(p, p.map);
-  const n = p.in;
-  const o = { k: "in", l: +n.left, r: +n.right, sh: +n.setHeld, kh: +n.spikeHeld, j: +n.jump, sl: +n.slide, se: +n.set, sp: +n.spike };
-  const key = [o.l, o.r, o.sh, o.kh, o.j, o.sl, o.se, o.sp].join("");
-  if (key !== net.lastIn || ++net.inTick >= 30) { net.lastIn = key; net.inTick = 0; netRelay(o); }
+  const n = p.in, c = net.cnt;
+  if (n.jump) c.j++; if (n.slide) c.s++; if (n.set) c.e++; if (n.spike) c.p++;
+  const key = [+n.left, +n.right, +n.setHeld, +n.spikeHeld, c.j, c.s, c.e, c.p].join("");
+  if (key !== net.lastIn) { net.lastIn = key; net.burst = 4; }
+  if (net.burst > 0 || ++net.inTick >= 30) {
+    if (net.burst > 0) net.burst--;
+    net.inTick = 0;
+    netGuestSend({ k: "in", q: ++net.inSeq, l: +n.left, r: +n.right, sh: +n.setHeld, kh: +n.spikeHeld, cj: c.j, cs: c.s, ce: c.e, cp: c.p });
+  }
+  if (++net.pingTick >= 60) { net.pingTick = 0; netGuestSend({ k: "ping", t: performance.now() }); }
   players.forEach(q => { if (q.tx !== undefined) { q.x += (q.tx - q.x) * 0.5; q.y += (q.ty - q.y) * 0.5; } });
   if (ball.tx !== undefined) { ball.x += (ball.tx - ball.x) * 0.6; ball.y += (ball.ty - ball.y) * 0.6; }
   updateParticles();
+}
+function drawNetInfo() {
+  let txt, ok;
+  if (net.role === "guest") { ok = !!net.dcu; txt = (ok ? "DIRECT" : "VIA SERVER") + (net.rtt ? " " + Math.round(net.rtt) + " ms" : ""); }
+  else { const g = Object.keys(net.pidx).map(Number).filter(s => s !== 0), d = g.filter(s => net.dc[s] && net.dc[s].u).length; ok = d === g.length; txt = "HOST " + d + "/" + g.length + " DIRECT"; }
+  ctx.save(); ctx.font = "bold 11px Arial"; ctx.textAlign = "left"; ctx.fillStyle = ok ? "rgba(255,255,255,.6)" : "rgba(255,209,102,.9)";
+  ctx.fillText(txt, 8, HEIGHT - 8); ctx.restore();
 }
 function drawWaiting() {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
