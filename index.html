@@ -743,11 +743,11 @@ function puTip() {
   if (gameMode === 2 && sport === "basketball") return "<b>Power-ups:</b> about every 15 seconds of play a mystery box appears. Touch it to roll one of three, all for the player who touched it: <b>Meteor Jump</b> (your next jump is huge and you move faster in the air until you land), <b>Vanish Drive</b> (your next dribble teleports you well forward) or <b>Flopper</b> (your next shove knocks back every opponent near you, on either side, but never your teammate). Each is used once.";
   if (gameMode === 2) return sport === "volleyball"
     ? "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Curve Spike</b> (your next spike flies fast over the net, then curves in and drops just behind it), <b>Inverted</b> (both opponents' controls are swapped for 5 seconds) or <b>Reiatsu</b> (both opponents can hardly jump for 5 seconds)."
-    : "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Super Saiyan</b> (only the player who touched the box, for 10 seconds), <b>Phantom Shot</b> (that player's next 3 shots vanish near the opponents and reappear elsewhere) or <b>Portals</b> (two portals open on the opponents' side for 15 seconds; a birdie that enters one leaves the other at extreme speed).";
+    : "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Super Saiyan</b> (only the player who touched the box, for 10 seconds), <b>Phantom Shot</b> (that player's next 3 shots vanish near the opponents and reappear elsewhere) or <b>Portals</b> (two portals open on the opponents' side for 8 seconds; a birdie that enters one leaves the other at extreme speed).";
   if (sport === "basketball") return "<b>Power-ups:</b> about every 15 seconds of play a mystery box appears. Touch it to roll one of three: <b>Meteor Jump</b> (your next jump is huge and you move faster in the air until you land), <b>Vanish Drive</b> (your next dribble teleports you well forward) or <b>Flopper</b> (your next shove sends your opponent flying much farther). Each is used once.";
   return sport === "volleyball"
     ? "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Shadow Clone</b> (a clone sets the ball to you for 10 seconds), <b>Inverted</b> (your opponent's controls are swapped for 5 seconds) or <b>Reiatsu</b> (your opponent can hardly jump for 5 seconds)."
-    : "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Super Saiyan</b> (10 seconds of endless 48% smashes; when your opponent receives one of your spikes, their return is lobbed back while they are knocked back and stunned), <b>Phantom Shot</b> (your next 3 shots vanish near your opponent and reappear somewhere else) or <b>Portals</b> (two portals open on your opponent's side for 15 seconds; a birdie that enters one leaves the other at extreme speed).";
+    : "<b>Power-ups:</b> about every 20 seconds of play a mystery box appears. Touch it to roll one of three: <b>Super Saiyan</b> (10 seconds of endless 48% smashes; when your opponent receives one of your spikes, their return is lobbed back while they are knocked back and stunned), <b>Phantom Shot</b> (your next 3 shots vanish near your opponent and reappear somewhere else) or <b>Portals</b> (two portals open on your opponent's side for 8 seconds; a birdie that enters one leaves the other at extreme speed).";
 }
 function openBriefing() {
   const B = BRIEF[sport];
@@ -2500,7 +2500,7 @@ const PU_INFO = {
   gravity: { name: "REIATSU",      color: "#8a5cf5", dur: 300 },
   saiyan:  { name: "SUPER SAIYAN", color: "#3aa8ff", dur: 600 },
   phantom: { name: "PHANTOM SHOT", color: "#c9a0ff", dur: 0 },
-  portal:  { name: "PORTALS",      color: "#ff9a1f", dur: 900 },
+  portal:  { name: "PORTALS",      color: "#ff9a1f", dur: 480 },
   curve:   { name: "CURVE SPIKE",  color: "#3ad1a0", dur: 0 },
   meteor:  { name: "METEOR JUMP",  color: "#ff6a2b", dur: 0 },
   drive:   { name: "VANISH DRIVE", color: "#38e0c0", dur: 0 },
@@ -2960,7 +2960,7 @@ const STEP = 1000 / 60;
 let lastTime = 0, acc = 0;
 
 // Cross-reference with the textbook chapter.
-function loop(t = 0) {
+function stepSim(t) {
   acc += Math.min(t - lastTime, 100);
   lastTime = t;
   while (acc >= STEP) {
@@ -2972,6 +2972,10 @@ function loop(t = 0) {
     acc -= STEP;
   }
   netPump();
+}
+// In a room the match is driven by a background timer, so a hidden or unfocused tab never stalls the game for everyone else.
+function loop(t = 0) {
+  if (!(net && net.worker)) stepSim(t);
   draw();
   requestAnimationFrame(loop);
 }
@@ -3019,6 +3023,7 @@ function netConnect(kind) {
   net = { ws, role: kind === "create" ? "host" : "guest", code: "", me: 0, pi: 0, roster: [false, false, false, false], mode: 1, sport: "volleyball",
     started: false, go: false, ready: {}, pidx: {}, rin: {}, ev: [], lastSnap: 0, colors: null, pu: settings.powerups, savedPU: settings.powerups, lastIn: "", inTick: 0,
     dc: {}, pc: {}, iceq: {}, last: {}, snapSeq: 0, gotSeq: 0, inSeq: 0, cnt: { j: 0, s: 0, e: 0, p: 0 }, burst: 0, pingTick: 0, rtt: 0, gpc: null, dcu: null, dcr: null, gice: [] };
+  try { net.worker = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(0)},8)"], { type: "text/javascript" }))); net.worker.onmessage = () => { if (net) stepSim(performance.now()); }; } catch (e) { net.worker = null; }
   ws.onopen = () => netSend(kind === "create" ? { t: "create" } : { t: "join", code });
   ws.onmessage = e => { try { netOnMsg(JSON.parse(e.data)); } catch (err) {} };
   ws.onerror = () => { if (net && net.ws === ws && !net.code) { msg.textContent = "Could not reach the server."; netLeave(); } };
@@ -3031,7 +3036,7 @@ function netConnect(kind) {
 function netLeave() {
   if (!net) return;
   const n = net; net = null;
-  try { Object.keys(n.pc).forEach(s => n.pc[s].close()); if (n.gpc) n.gpc.close(); } catch (e) {}
+  try { Object.keys(n.pc).forEach(s => n.pc[s].close()); if (n.gpc) n.gpc.close(); if (n.worker) n.worker.terminate(); } catch (e) {}
   try { n.ws.onclose = null; n.ws.onerror = null; n.ws.close(); } catch (e) {}
   settings.powerups = n.savedPU;
   netEl("restartBtn").style.display = "";
