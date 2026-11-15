@@ -1,0 +1,8 @@
+{
+  "name": "study-guide-rooms",
+  "version": "1.0.0",
+  "description": "Room server for the Study Guide group sessions",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
