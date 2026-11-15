@@ -1999,6 +1999,20 @@ function buildCrowd(sp) {
   });
   return out;
 }
+// Study break: each fan is pre-drawn once as a tiny sprite, so a cheering crowd costs one drawImage per fan instead of several vector paths.
+function fanSprite(f, arms) {
+  const r = f.r, ox = Math.ceil(r * 1.8) + 3, oy = Math.ceil(r * 1.5) + 3, c = document.createElement("canvas");
+  c.width = ox * 2; c.height = oy + Math.ceil(r * 3.6) + 3;
+  const g = c.getContext("2d");
+  if (arms) {
+    g.strokeStyle = f.skin; g.lineWidth = 2.6; g.lineCap = "round";
+    g.beginPath(); g.moveTo(ox - r, oy + r * 1.4); g.lineTo(ox - r * 1.7, oy - r * 1.5); g.moveTo(ox + r, oy + r * 1.4); g.lineTo(ox + r * 1.7, oy - r * 1.5); g.stroke();
+  }
+  g.fillStyle = f.shirt; g.beginPath(); g.ellipse(ox, oy + r * 2.2, r * 1.5, r * 1.35, 0, Math.PI, 0); g.fill();
+  g.fillStyle = f.skin; g.beginPath(); g.arc(ox, oy, r, 0, Math.PI * 2); g.fill();
+  g.fillStyle = f.hair; g.beginPath(); g.arc(ox, oy - r * 0.1, r * 1.02, Math.PI, 0); g.fill();
+  return { c, ox, oy };
+}
 function drawCrowd(sp) {
   if (!CROWD[sp]) CROWD[sp] = buildCrowd(sp);
   const now = performance.now(), t = now / 1000, cheer = now < crowdUntil;
@@ -2007,14 +2021,9 @@ function drawCrowd(sp) {
     row.fans.forEach(f => {
       const wave = Math.max(0, Math.sin(t * 1.1 - f.x / 120) - 0.75) * 5;
       const up = cheer ? Math.abs(Math.sin(t * 8 + f.ph)) * 6 : Math.sin(t * 1.8 + f.ph) * 0.7 + wave;
-      const y = row.y - up, r = f.r;
-      if (cheer && f.arms) {
-        ctx.strokeStyle = f.skin; ctx.lineWidth = 2.6; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(f.x - r, y + r * 1.4); ctx.lineTo(f.x - r * 1.7, y - r * 1.5); ctx.moveTo(f.x + r, y + r * 1.4); ctx.lineTo(f.x + r * 1.7, y - r * 1.5); ctx.stroke();
-      }
-      ctx.fillStyle = f.shirt; ctx.beginPath(); ctx.ellipse(f.x, y + r * 2.2, r * 1.5, r * 1.35, 0, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = f.skin; ctx.beginPath(); ctx.arc(f.x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = f.hair; ctx.beginPath(); ctx.arc(f.x, y - r * 0.1, r * 1.02, Math.PI, 0); ctx.fill();
+      const useArms = cheer && f.arms;
+      const sp2 = useArms ? (f.spA || (f.spA = fanSprite(f, true))) : (f.spN || (f.spN = fanSprite(f, false)));
+      ctx.drawImage(sp2.c, Math.round(f.x - sp2.ox), Math.round(row.y - up - sp2.oy));
     });
   });
 }
@@ -2741,7 +2750,8 @@ function puUpdate() {
     pu.box.age++;
     if (!pu.roll) for (const p of players) { if (Math.hypot(p.x - pu.box.x, (p.y - 10) - pu.box.y) < p.radius + 18) { puCollect(p); break; } }
   }
-  if (live) for (const k of ["clone", "invert", "gravity", "saiyan", "portal"]) if (F[k] && --F[k].t <= 0) puEnd(k);
+  // Study clock: effect timers keep running during the serve wait, so a power-up cannot be saved up by stalling.
+  for (const k of ["clone", "invert", "gravity", "saiyan", "portal"]) if (F[k] && --F[k].t <= 0) puEnd(k);
 
   if (F.meteor && F.meteor.state === 1) {
     const o = players[F.meteor.who];
