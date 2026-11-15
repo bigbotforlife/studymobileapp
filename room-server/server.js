@@ -10,14 +10,39 @@ const PORT = process.env.PORT || 3000;
 const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const MAX_ROOMS = 5000, MAX_PAYLOAD = 256 * 1024, ROOM_SLOTS = 4;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+// Username filter: strips look-alike characters, then checks banned words inside the name and as whole words.
+const NAME_INSIDE = ["fuck", "shit", "bitch", "cunt", "nigg", "whore", "slut", "asshole", "dumbass", "bastard", "pussy", "penis", "vagina", "blowjob", "handjob", "cumshot", "jizz", "hentai", "molest", "pedophile", "paedophile", "retard", "faggot", "tranny", "wetback", "hitler", "dildo", "vibrator", "masturbat", "orgasm", "genital", "boob", "cocksuck", "anus", "porno"];
+const NAME_WHOLE = ["ass", "arse", "tit", "tits", "dick", "cock", "piss", "fag", "rape", "raped", "rapist", "rapists", "nazi", "pedo", "spic", "kike", "coon", "dyke", "gook", "chink", "negro", "cum", "sex", "boner", "anal", "nude", "nudes", "kkk", "horny", "milf", "orgy", "incest", "wank", "wanker", "twat", "bollock", "bollocks", "porn", "xxx", "nsfw", "hoe", "thot", "cuck", "simp"];
+const NAME_OK = ["scunthorpe", "penistone", "analyst", "analysis", "shiitake", "therapist"];
+const NAME_RE_IN = NAME_INSIDE.map(w => new RegExp(w.split("").map(c => c + "+").join("")));
+const NAME_RE_WH = NAME_WHOLE.map(w => new RegExp("^" + w.split("").map(c => c + "+").join("") + "$"));
+function nameBlocked(raw) {
+  const base = String(raw || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const maps = [{ "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "i", "+": "t", "8": "b" }, { "0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "l", "+": "t", "8": "b" }];
+  for (const m of maps) {
+    const s = base.replace(/[0-9@$!+]/g, c => m[c] || c);
+    const tokens = s.split(/[^a-z]+/).filter(Boolean);
+    let joined = tokens.join("");
+    NAME_OK.forEach(w => { joined = joined.split(w).join(""); });
+    if (NAME_RE_IN.some(re => re.test(joined))) return true;
+    if (NAME_RE_WH.some(re => re.test(joined) || tokens.some(t => re.test(t)))) return true;
+  }
+  return false;
+}
 const rooms = new Map();
+function cleanName(s) {
+  s = String(s || "").replace(/[\u0000-\u001f\u007f<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
+  return s;
+}
+const allConns = new Set();
+const SPORTS = ["volleyball", "badminton", "basketball"];
 
 // ---------- tiny WebSocket implementation (RFC 6455, text frames) ----------
 class Conn {
   constructor(socket, ip) {
     this.socket = socket; this.ip = ip; this.buf = Buffer.alloc(0); this.alive = true;
     this.room = null; this.slot = -1; this.frag = null; this.last = Date.now();
-    this.msgCount = 0; this.msgWindow = Date.now();
+    this.msgCount = 0; this.msgWindow = Date.now(); allConns.add(this);
     socket.on("data", d => this.onData(d));
     socket.on("close", () => this.onClose());
     socket.on("error", () => this.onClose());
@@ -67,7 +92,7 @@ class Conn {
   json(o) { return this.send(JSON.stringify(o)); }
   backlog() { return this.socket.writableLength || 0; }
   kill() { if (!this.alive) return; try { this.socket.destroy(); } catch (e) {} this.onClose(); }
-  onClose() { if (!this.alive) return; this.alive = false; leave(this); }
+  onClose() { if (!this.alive) return; this.alive = false; allConns.delete(this); leave(this); }
   onText(s) {
     const now = Date.now();
     if (now - this.msgWindow > 1000) { this.msgWindow = now; this.msgCount = 0; }
@@ -102,7 +127,9 @@ function handle(c, m) {
     if (c.room) return;
     if (rooms.size >= MAX_ROOMS) return c.json({ t: "err", m: "Server is busy, try again soon." });
     const code = newCode(); if (!code) return c.json({ t: "err", m: "Could not make a room." });
-    const r = { code, slots: new Array(ROOM_SLOTS).fill(null), locked: false, made: Date.now() };
+    c.name = cleanName(m.name) || "Player";
+    if (nameBlocked(c.name)) return c.json({ t: "err", m: "That username is not allowed. Please choose another." });
+    const r = { code, slots: new Array(ROOM_SLOTS).fill(null), locked: false, made: Date.now(), pub: false, mode: 1, sport: "volleyball" };
     r.slots[0] = c; c.room = r; c.slot = 0; rooms.set(code, r);
     return c.json({ t: "created", code, slot: 0 });
   }
@@ -113,12 +140,30 @@ function handle(c, m) {
     if (r.locked) return c.json({ t: "err", m: "That match has already started." });
     const slot = r.slots.findIndex((s, i) => i > 0 && !s);
     if (slot < 0) return c.json({ t: "err", m: "That room is full." });
+    c.name = cleanName(m.name) || "Player";
+    if (nameBlocked(c.name)) return c.json({ t: "err", m: "That username is not allowed. Please choose another." });
     r.slots[slot] = c; c.room = r; c.slot = slot;
     c.json({ t: "joined", code: r.code, slot });
-    r.slots[0].json({ t: "join", slot });
+    r.slots[0].json({ t: "join", slot, name: c.name });
     return;
   }
+  if (m.t === "list" && !c.room) {
+    const now = Date.now();
+    if (c.lastList && now - c.lastList < 2000) return;
+    c.lastList = now;
+    const out = [];
+    rooms.forEach(r => {
+      const n = r.slots.filter(Boolean).length, need = r.mode === 2 ? 4 : 2;
+      if (r.pub && !r.locked && n < need) out.push({ code: r.code, host: r.slots[0] ? r.slots[0].name : "", sport: r.sport, mode: r.mode, n, need, made: r.made });
+    });
+    out.sort((a, b) => b.made - a.made);
+    return c.json({ t: "rooms", rooms: out.slice(0, 30) });
+  }
   const r = c.room; if (!r) return;
+  if (m.t === "meta" && c.slot === 0) {
+    r.pub = !!m.pub; r.mode = m.mode === 2 ? 2 : 1; r.sport = SPORTS.includes(m.sport) ? m.sport : "volleyball";
+    return;
+  }
   if (m.t === "lock" && c.slot === 0) { r.locked = !!m.v; return; }
   if (m.t === "m" && m.d && typeof m.d === "object") {
     const out = JSON.stringify({ t: "m", from: c.slot, d: m.d });
@@ -156,7 +201,7 @@ server.on("upgrade", (req, socket) => {
   new Conn(socket, req.socket.remoteAddress);
 });
 // Keep connections alive through proxies and drop dead ones; remove rooms nobody is in.
-const conns = () => { const s = new Set(); rooms.forEach(r => r.slots.forEach(g => g && s.add(g))); return s; };
+const conns = () => allConns;
 setInterval(() => {
   const now = Date.now();
   conns().forEach(c => { if (now - c.last > 70000) c.kill(); else c.send(Buffer.alloc(0), 0x9); });
