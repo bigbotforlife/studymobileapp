@@ -35,7 +35,7 @@ function cleanName(s) {
   return s;
 }
 const allConns = new Set();
-const SPORTS = ["volleyball", "badminton", "basketball"];
+const SPORTS = ["volleyball", "badminton", "basketball", "tournament"];
 
 // ---------- tiny WebSocket implementation (RFC 6455, text frames) ----------
 class Conn {
