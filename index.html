@@ -125,8 +125,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .legacy-btn { border-radius: 8px; box-shadow: 0 2px 0 #1d1d1b; }
 .set-tabs button { border-radius: 8px; box-shadow: 0 2px 0 #1d1d1b; }
 #gameArea { position: fixed; inset: 0; z-index: 1500; align-items: center; justify-content: center; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #1d2b47, #070b14 78%); }
-#stage { position: relative; width: min(100vw, calc(100vh * 1.8)); aspect-ratio: 9 / 5; }
-#stage #game { width: 100%; height: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: 0 0 70px rgba(0,0,0,0.65); }
+#stage { position: relative; width: min(94vw, calc((100vh - 64px) * 1.8)); aspect-ratio: 9 / 5; border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 4px rgba(255,255,255,0.92), 0 0 0 8px rgba(0,0,0,0.35), 0 22px 60px rgba(0,0,0,0.55); }
+#stage #game { display: block; width: 100%; height: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
 #gearBtn { position: absolute; top: 10px; right: 10px; margin: 0; padding: 8px 14px; font-size: 14px; color: #ffffff; background: rgba(14,20,34,0.82); border: 2px solid rgba(255,255,255,0.4); box-shadow: none; z-index: 5; }
 #gearBtn:hover { background: rgba(40,52,82,0.92); transform: none; }
 #gearBtn:active { transform: translateY(1px); box-shadow: none; }
@@ -155,6 +155,46 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .gp-ctl summary { cursor: pointer; font-weight: 700; color: #c9501f; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; }
 .gp-card .gp-ctl .controls { border-top: 0; padding-top: 0; margin-top: 8px; }
 #resumeBtn::before { content: "\25B6  "; } #restartBtn::before { content: "\21BB  "; } #helpBtn::before { content: "?  "; } #soundBtn::before { content: "\266A  "; } #setBtn::before { content: "\2699  "; } #menuBtn::before { content: "\2302  "; }
+
+/* Decorative backdrop behind the court, themed per sport */
+#gameArea { --a: #1d2b47; --b: #070b14; --line: rgba(255,255,255,0.07); background:
+  radial-gradient(circle at 12% 18%, var(--line) 0 90px, transparent 91px),
+  radial-gradient(circle at 88% 82%, var(--line) 0 140px, transparent 141px),
+  radial-gradient(circle at 85% 15%, transparent 0 60px, var(--line) 61px 64px, transparent 65px),
+  radial-gradient(circle at 14% 85%, transparent 0 100px, var(--line) 101px 104px, transparent 105px),
+  repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0 14px, transparent 14px 28px),
+  radial-gradient(ellipse at 50% 40%, var(--a), var(--b) 80%); }
+#gameArea[data-sport="volleyball"] { --a: #1c7fa8; --b: #0a2f46; }
+#gameArea[data-sport="badminton"] { --a: #1f8a5b; --b: #0a2f22; }
+#gameArea[data-sport="basketball"] { --a: #b8571f; --b: #3a1608; }
+
+/* Lighter backdrop */
+#gameArea { --a: #eaf3ff; --b: #a9c8ee; --line: rgba(255,255,255,0.45); background:
+  radial-gradient(circle at 12% 18%, var(--line) 0 90px, transparent 91px),
+  radial-gradient(circle at 88% 82%, var(--line) 0 140px, transparent 141px),
+  radial-gradient(circle at 85% 15%, transparent 0 60px, var(--line) 61px 65px, transparent 66px),
+  radial-gradient(circle at 14% 85%, transparent 0 100px, var(--line) 101px 105px, transparent 106px),
+  repeating-linear-gradient(45deg, rgba(255,255,255,0.22) 0 14px, transparent 14px 28px),
+  radial-gradient(ellipse at 50% 40%, var(--a), var(--b) 85%); }
+#gameArea[data-sport="volleyball"] { --a: #c9f0fb; --b: #6cc3e6; }
+#gameArea[data-sport="badminton"] { --a: #d3f5e1; --b: #6fcb98; }
+#gameArea[data-sport="basketball"] { --a: #ffe3c2; --b: #f2ab68; }
+#stage { box-shadow: 0 0 0 4px rgba(255,255,255,0.95), 0 0 0 7px rgba(29,29,27,0.28), 0 18px 44px rgba(29,43,71,0.35); }
+
+/* Cooler backdrop: drifting sport icons, halftone corners and soft colour blobs */
+#gameArea { background:
+  radial-gradient(ellipse 55% 45% at 10% 10%, rgba(255,255,255,0.55), transparent 70%),
+  radial-gradient(ellipse 50% 50% at 92% 90%, var(--blob), transparent 70%),
+  radial-gradient(ellipse at 50% 40%, var(--a), var(--b) 88%) !important; }
+#gameArea::before { content: ""; position: absolute; inset: -240px; background-size: 240px 240px; background-image: var(--tile); opacity: 0.55; animation: bgDrift 38s linear infinite; will-change: transform; pointer-events: none; }
+#gameArea::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.8) 2px, transparent 2.6px); background-size: 20px 20px; -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 52%, #000 100%); mask-image: radial-gradient(ellipse at 50% 50%, transparent 52%, #000 100%); opacity: 0.55; pointer-events: none; }
+#stage { z-index: 2; }
+@keyframes bgDrift { from { transform: translate(0, 0); } to { transform: translate(240px, 240px); } }
+@media (prefers-reduced-motion: reduce) { #gameArea::before { animation: none; } }
+#gameArea { --tile: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 opacity=%220.7%22%3E%0A%3Cg transform=%22translate%2860 64%29 rotate%280%29 scale%281%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-27 -8Q0 14 27 -8M-8 -27Q-16 0 -2 28M20 -19Q4 4 22 21%22/%3E%3C/g%3E%3Cg transform=%22translate%28180 168%29 rotate%2825%29 scale%280.8%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-27 -8Q0 14 27 -8M-8 -27Q-16 0 -2 28M20 -19Q4 4 22 21%22/%3E%3C/g%3E%0A%3Cg fill=%22%23fff%22 stroke=%22none%22 opacity=%220.8%22%3E%3Ccircle cx=%22150%22 cy=%2236%22 r=%224%22/%3E%3Ccircle cx=%2230%22 cy=%22170%22 r=%224%22/%3E%3Ccircle cx=%22210%22 cy=%2296%22 r=%223%22/%3E%3Ccircle cx=%22104%22 cy=%22196%22 r=%223%22/%3E%3Ccircle cx=%22118%22 cy=%22110%22 r=%223%22/%3E%3C/g%3E%0A%3Cg opacity=%220.8%22%3E%3Cpath d=%22M200 30v14M193 37h14%22/%3E%3Cpath d=%22M40 118v12M34 124h12%22/%3E%3Cpath d=%22M140 214v12M134 220h12%22/%3E%3C/g%3E%0A%3C/svg%3E"); --blob: rgba(120,160,255,0.55); }
+#gameArea[data-sport="volleyball"] { --tile: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 opacity=%220.7%22%3E%0A%3Cg transform=%22translate%2860 64%29 rotate%280%29 scale%281%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-27 -8Q0 14 27 -8M-8 -27Q-16 0 -2 28M20 -19Q4 4 22 21%22/%3E%3C/g%3E%3Cg transform=%22translate%28180 168%29 rotate%2825%29 scale%280.8%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-27 -8Q0 14 27 -8M-8 -27Q-16 0 -2 28M20 -19Q4 4 22 21%22/%3E%3C/g%3E%0A%3Cg fill=%22%23fff%22 stroke=%22none%22 opacity=%220.8%22%3E%3Ccircle cx=%22150%22 cy=%2236%22 r=%224%22/%3E%3Ccircle cx=%2230%22 cy=%22170%22 r=%224%22/%3E%3Ccircle cx=%22210%22 cy=%2296%22 r=%223%22/%3E%3Ccircle cx=%22104%22 cy=%22196%22 r=%223%22/%3E%3Ccircle cx=%22118%22 cy=%22110%22 r=%223%22/%3E%3C/g%3E%0A%3Cg opacity=%220.8%22%3E%3Cpath d=%22M200 30v14M193 37h14%22/%3E%3Cpath d=%22M40 118v12M34 124h12%22/%3E%3Cpath d=%22M140 214v12M134 220h12%22/%3E%3C/g%3E%0A%3C/svg%3E"); --blob: rgba(255,214,120,0.75); }
+#gameArea[data-sport="badminton"] { --tile: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 opacity=%220.7%22%3E%0A%3Cg transform=%22translate%2860 64%29 rotate%28-25%29 scale%281%29%22%3E%3Ccircle cy=%2222%22 r=%229%22/%3E%3Cpath d=%22M-9 16L-26 -26H26L9 16M-14 -2H14M-20 -14H20M0 -26V14%22/%3E%3C/g%3E%3Cg transform=%22translate%28180 168%29 rotate%280%29 scale%280.8%29%22%3E%3Ccircle cy=%2222%22 r=%229%22/%3E%3Cpath d=%22M-9 16L-26 -26H26L9 16M-14 -2H14M-20 -14H20M0 -26V14%22/%3E%3C/g%3E%0A%3Cg fill=%22%23fff%22 stroke=%22none%22 opacity=%220.8%22%3E%3Ccircle cx=%22150%22 cy=%2236%22 r=%224%22/%3E%3Ccircle cx=%2230%22 cy=%22170%22 r=%224%22/%3E%3Ccircle cx=%22210%22 cy=%2296%22 r=%223%22/%3E%3Ccircle cx=%22104%22 cy=%22196%22 r=%223%22/%3E%3Ccircle cx=%22118%22 cy=%22110%22 r=%223%22/%3E%3C/g%3E%0A%3Cg opacity=%220.8%22%3E%3Cpath d=%22M200 30v14M193 37h14%22/%3E%3Cpath d=%22M40 118v12M34 124h12%22/%3E%3Cpath d=%22M140 214v12M134 220h12%22/%3E%3C/g%3E%0A%3C/svg%3E"); --blob: rgba(255,255,170,0.7); }
+#gameArea[data-sport="basketball"] { --tile: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 opacity=%220.7%22%3E%0A%3Cg transform=%22translate%2860 64%29 rotate%280%29 scale%281%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-28 0H28M0 -28V28M-20 -20Q-6 0 -20 20M20 -20Q6 0 20 20%22/%3E%3C/g%3E%3Cg transform=%22translate%28180 168%29 rotate%2825%29 scale%280.8%29%22%3E%3Ccircle r=%2228%22/%3E%3Cpath d=%22M-28 0H28M0 -28V28M-20 -20Q-6 0 -20 20M20 -20Q6 0 20 20%22/%3E%3C/g%3E%0A%3Cg fill=%22%23fff%22 stroke=%22none%22 opacity=%220.8%22%3E%3Ccircle cx=%22150%22 cy=%2236%22 r=%224%22/%3E%3Ccircle cx=%2230%22 cy=%22170%22 r=%224%22/%3E%3Ccircle cx=%22210%22 cy=%2296%22 r=%223%22/%3E%3Ccircle cx=%22104%22 cy=%22196%22 r=%223%22/%3E%3Ccircle cx=%22118%22 cy=%22110%22 r=%223%22/%3E%3C/g%3E%0A%3Cg opacity=%220.8%22%3E%3Cpath d=%22M200 30v14M193 37h14%22/%3E%3Cpath d=%22M40 118v12M34 124h12%22/%3E%3Cpath d=%22M140 214v12M134 220h12%22/%3E%3C/g%3E%0A%3C/svg%3E"); --blob: rgba(255,120,80,0.5); }
 </style>
 </head>
 <body>
@@ -745,7 +785,7 @@ function setupGameScreen(mode, s) {
   netTop = SPORTS[sport].netTop;
   canvas.style.background = THEMES[sport].bg;
   document.getElementById("menu").style.display = "none";
-  document.getElementById("gameArea").style.display = "flex"; closeGamePanel(true);
+  document.getElementById("gameArea").style.display = "flex"; document.getElementById("gameArea").dataset.sport = sport; closeGamePanel(true);
   score1 = 0; score2 = 0; gameOver = false; particles = []; lastHitSide = -1;
   resetStats(); hideStats();
   createPlayers(); dust = [];
