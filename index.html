@@ -415,7 +415,7 @@ const ACTIONS = [["left","Move left"],["right","Move right"],["jump","Jump"],["s
 const DEFAULT_BINDS = [
   { left: "a", right: "d", jump: "w", slide: "s", set: "e", spike: "q" },
   { left: "j", right: "l", jump: "i", slide: "k", set: "o", spike: "u" },
-  { left: "arrowleft", right: "arrowright", jump: "arrowup", slide: "arrowdown", set: "shift", spike: "enter" },
+  { left: "arrowleft", right: "arrowright", jump: "arrowup", slide: "arrowdown", set: "shiftright", spike: "enter" },
   { left: "numpad1", right: "numpad3", jump: "numpad5", slide: "numpad2", set: "numpad6", spike: "numpad4" }
 ];
 const BOOL_KEYS = ["sound", "musicOn", "powerups", "particles", "cues", "hints", "menuAnim", "autoPause", "crowd", "shake"];
@@ -429,7 +429,7 @@ function loadSettings() {
     const raw = localStorage.getItem("sg-prefs");
     if (raw) {
       const o = JSON.parse(raw);
-      if (Array.isArray(o.binds)) o.binds.slice(0, 4).forEach((b, i) => { if (b && typeof b === "object") ACTIONS.forEach(([a]) => { if (typeof b[a] === "string" && b[a]) st.binds[i][a] = b[a]; }); });
+      if (Array.isArray(o.binds)) o.binds.slice(0, 4).forEach((b, i) => { if (b && typeof b === "object") ACTIONS.forEach(([a]) => { if (typeof b[a] === "string" && b[a]) st.binds[i][a] = ({ shift: "shiftright", control: "controlleft", alt: "altleft" })[b[a]] || b[a]; }); });
       if (Array.isArray(o.colors)) o.colors.slice(0, 4).forEach((c, i) => { if (PALETTE.some(p => p[1] === c)) st.colors[i] = c; });
       ["master", "sfx", "music"].forEach(k => { if (typeof o[k] === "number" && o[k] >= 0 && o[k] <= 1) st[k] = o[k]; });
       BOOL_KEYS.forEach(k => { if (k !== "powerups" && typeof o[k] === "boolean") st[k] = o[k]; });
@@ -441,8 +441,9 @@ let settings = loadSettings();
 function saveSettings() { try { localStorage.setItem("sg-prefs", JSON.stringify(settings)); } catch (e) {} }
 function toMap(b) { return { left: [b.left], right: [b.right], jump: [b.jump], slide: [b.slide], set: [b.set], spike: [b.spike] }; }
 function keyLabel(k) {
-  const m = { arrowleft: "←", arrowright: "→", arrowup: "↑", arrowdown: "↓", " ": "SPACE" };
+  const m = { arrowleft: "←", arrowright: "→", arrowup: "↑", arrowdown: "↓", " ": "SPACE", controlleft: "L-CTRL", controlright: "R-CTRL", altleft: "L-ALT", altright: "R-ALT", shiftleft: "L-SHIFT", shiftright: "R-SHIFT", enter: "ENTER", backspace: "BKSP", mouse0: "MOUSE LEFT", mouse1: "MOUSE MIDDLE", mouse2: "MOUSE RIGHT", mouse3: "MOUSE BACK", mouse4: "MOUSE FWD" };
   if (m[k]) return m[k];
+  if (/^mouse\d+$/.test(k)) return "MOUSE " + k.slice(5);
   if (k.startsWith("numpad")) return "NUM " + k.slice(6).toUpperCase();
   return k.toUpperCase();
 }
@@ -453,6 +454,8 @@ function applyPlayerSettings() { if (net) { players.forEach(p => { p.map = toMap
 // Review the key terms before moving on to the next chapter.
 function normalizeKey(e) {
   if (e.code && e.code.startsWith("Numpad")) return e.code.toLowerCase();
+  if (e.code && /^(Shift|Control|Alt)(Left|Right)$/.test(e.code)) return e.code.toLowerCase(); // left and right modifiers are separate keys
+  if (e.code && /^Digit\d$/.test(e.code)) return e.code.slice(5); // top-row numbers stay "1".."0" even while Shift is held
   return (e.key || "").toLowerCase();
 }
 
@@ -525,7 +528,7 @@ function setVol(k, v) {
 }
 function startRebind(slot, action) { rebinding = { slot, action }; renderSettings(); }
 function bindable(key) {
-  if (!key || key === "escape" || key === "m" || key === "tab" || key === "meta" || key === "control" || key === "alt" || key === "capslock" || key === "dead" || key === "unidentified" || key === "contextmenu") return false;
+  if (!key || key === "escape" || key === "m" || key === "tab" || key === "meta" || key === "capslock" || key === "altgraph" || key === "dead" || key === "unidentified" || key === "contextmenu") return false;
   return !/^f\d+$/.test(key);
 }
 function assignBind(slot, action, key) {
@@ -555,12 +558,12 @@ function renderSettings() {
   const row = (label, ctl, note) => `<div class="set-row"><span>${label}${note ? `<br><span class="set-note">${note}</span>` : ""}</span>${ctl}</div>`;
   let h = "";
   if (setTab === "controls") {
-    h += '<p class="set-note">Click a key box, then press the new key. Esc cancels. If the key is already used, the two keys swap. M (sound) and Esc (pause) are reserved.</p>';
+    h += '<p class="set-note">Click a key box, then press a key, a number, Ctrl, Alt, Shift or a mouse button (for left-click, click an empty spot in this panel). Esc cancels. If the key is already used, the two keys swap. M (sound) and Esc (pause) are reserved.</p>';
     for (let slot = 0; slot < 4; slot++) {
       h += `<div class="set-player"><b style="color:${settings.colors[slot]}">${SLOT_NAMES[slot]}</b><div class="set-grid">`;
       ACTIONS.forEach(([a, label]) => {
         const waiting = rebinding && rebinding.slot === slot && rebinding.action === a;
-        h += `<div class="set-row"><span>${label}</span><button class="bind-btn ${waiting ? "wait" : ""}" onclick="startRebind(${slot},'${a}')">${waiting ? "press a key…" : keyLabel(settings.binds[slot][a])}</button></div>`;
+        h += `<div class="set-row"><span>${label}</span><button class="bind-btn ${waiting ? "wait" : ""}" onclick="startRebind(${slot},'${a}')">${waiting ? "press a key or mouse button…" : keyLabel(settings.binds[slot][a])}</button></div>`;
       });
       h += "</div></div>";
     }
@@ -608,15 +611,40 @@ document.addEventListener("keydown", e => {
 }, true);
 document.addEventListener("keyup", e => { if (settingsOpen && rebinding) e.stopImmediatePropagation(); }, true);
 
+// Mouse buttons can be keybinds too: they feed the same keys/pressed tables as the keyboard.
+const MOUSE_UI = "button,input,select,textarea,a,label,#gamePanel,#settingsView,#faqView,#menu,#legacyView";
+document.addEventListener("mousedown", e => {
+  if (settingsOpen && rebinding) {
+    if (e.button === 0 && e.target.closest && e.target.closest("button,input,select,a")) return; // a plain click on a button just cancels
+    e.preventDefault(); e.stopImmediatePropagation();
+    assignBind(rebinding.slot, rebinding.action, "mouse" + e.button); rebinding = null; renderSettings();
+    return;
+  }
+  if (settingsOpen || legacyOpen || !gameStarted || briefingOpen || statsOpen) return;
+  if (e.target.closest && e.target.closest(MOUSE_UI)) return;
+  const k = "mouse" + e.button;
+  if (!keys[k]) pressed[k] = true;
+  keys[k] = true;
+  if (e.button !== 0) e.preventDefault();
+}, true);
+document.addEventListener("mouseup", e => {
+  keys["mouse" + e.button] = false;
+  if (e.button >= 3 && gameStarted && !settingsOpen) e.preventDefault();
+}, true);
+document.addEventListener("auxclick", e => { if (gameStarted || (settingsOpen && rebinding)) e.preventDefault(); }, true);
+document.addEventListener("contextmenu", e => { if ((settingsOpen && rebinding) || (gameStarted && e.target.tagName === "CANVAS")) e.preventDefault(); });
+function boundKeySet() { const o = {}; settings.binds.forEach(b => { for (const a in b) o[b[a]] = 1; }); return o; }
 document.addEventListener("keydown", e => {
   if (document.activeElement && document.activeElement.tagName === "INPUT") return;
   if (legacyOpen) return;
   const key = normalizeKey(e);
+  // Ctrl/Alt as game keys: stop the browser reacting (menu bar, Ctrl+D bookmark) but never block reload shortcuts.
+  if (gameStarted && !settingsOpen && ((key === "altleft" || key === "altright") || (e.ctrlKey && key !== "r" && key !== "f5" && boundKeySet()[key]))) e.preventDefault();
   if (key === "m" && gameStarted) { toggleSound(); return; }
   if (statsOpen) { if (key === "enter") { e.preventDefault(); restart(); } return; }
   if (briefingOpen) { if (key === "enter") { e.preventDefault(); closeBriefing(); } return; }
   if (key === "escape") { e.preventDefault(); togglePause(); return; }
-  if (["arrowup","arrowdown","arrowleft","arrowright"," ","enter","shift"].includes(key) || key.startsWith("numpad")) e.preventDefault();
+  if (["arrowup","arrowdown","arrowleft","arrowright"," ","enter","shiftleft","shiftright"].includes(key) || key.startsWith("numpad")) e.preventDefault();
   if (!keys[key]) {
     pressed[key] = true;
   }
