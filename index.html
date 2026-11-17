@@ -47,7 +47,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 .brief-card li { margin-bottom: 6px; }
 .settings-btn { left: auto; right: 12px; }
 .faq-btn { left: auto; right: 84px; }
-#faqView { position: fixed; inset: 0; background: rgba(29,29,27,0.88); display: none; justify-content: center; align-items: center; z-index: 4000; }
+.log-btn { left: auto; right: 150px; }
+#logView, #faqView { position: fixed; inset: 0; background: rgba(29,29,27,0.88); display: none; justify-content: center; align-items: center; z-index: 4000; }
+#logView { display: none; }
+#logView ul { margin: 4px 0 10px 18px; }
 #faqView a { color: #c9501f; font-weight: 700; }
 .settings-hint { position: absolute; bottom: 52px; right: 12px; z-index: 2; background: #ffd166; color: #1d1d1b; border: 3px solid #1d1d1b; border-radius: 3px; box-shadow: 4px 4px 0 #c9501f; padding: 6px 10px; font-weight: 700; font-size: 14px; text-align: center; line-height: 1.25; animation: hintBob 1.6s ease-in-out infinite; }
 .settings-hint span { font-size: 11px; font-weight: 600; }
@@ -216,6 +219,7 @@ button:focus-visible { outline: 4px solid #2f7dff; outline-offset: 3px; }
 <button class="legacy-btn" onclick="openLegacy()">Legacy</button>
 <button class="legacy-btn settings-btn" onclick="openSettings()">Settings</button>
 <button class="legacy-btn faq-btn" onclick="openFaq()">FAQ</button>
+<button class="legacy-btn log-btn" onclick="openLog()">Updates</button>
 <div class="settings-hint"><span>turn them on in Settings</span><br>Power-ups ▼</div>
 <div class="menu-content">
 <h1>Study Guide</h1>
@@ -347,6 +351,43 @@ To report a bug, request a feature, or anything else, email: <a href="mailto:yas
 </div>
 </div>
 
+<div id="logView">
+<div class="brief-card">
+<h1>Update Log</h1>
+<h2>What's new</h2>
+<div class="controls">
+<b>Controls</b>
+<ul>
+<li>Keybinds can use the number row, Ctrl, Alt, Shift (left and right are separate), Caps Lock and mouse buttons.</li>
+<li>Fullscreen captures browser shortcuts like Ctrl+W; otherwise the browser asks before closing mid-match.</li>
+<li>Arrow keys move between menu buttons.</li>
+</ul>
+<b>Online play</b>
+<ul>
+<li>Much less lag: smaller updates, instant movement for your own player, and fewer dropped packets.</li>
+<li>Tournament mode (best of 3) for 1v1, 2v2 and online, with a fixed winner mismatch.</li>
+<li>Fixed players sometimes being unable to move in basketball.</li>
+</ul>
+<b>Looks and menus</b>
+<ul>
+<li>Selected options in the lobby are highlighted green with a check mark.</li>
+<li>New full-screen layout, in-game MENU button and a better pause panel.</li>
+<li>Redrawn players with a different kit for each sport, a real volleyball and nicer effects.</li>
+<li>Light animated backdrop, sharper hi-res graphics and button sounds.</li>
+<li>Music starts as soon as the game opens.</li>
+</ul>
+<b>Gameplay</b>
+<ul>
+<li>Volleyball cut shot fixed.</li>
+<li>Basketball dribbles slowly at first and fast after you press dribble.</li>
+<li>Power-up timers keep running during serves.</li>
+<li>Fixed heavy lag when a match ended.</li>
+</ul>
+</div>
+<button class="menu-button" onclick="closeLog()">DONE</button>
+</div>
+</div>
+
 <div id="legacyView"><button class="legacy-back" onclick="closeLegacy()">&larr; Back</button><iframe id="legacyFrame" title="Legacy"></iframe></div>
 
 <div id="ctrlCover">
@@ -472,6 +513,9 @@ function openLegacy() {
   frame.focus();
 }
 function openFaq() { document.getElementById("faqView").style.display = "flex"; }
+function openLog() { document.getElementById("logView").style.display = "flex"; }
+function closeLog() { document.getElementById("logView").style.display = "none"; }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("logView").style.display === "flex") { e.preventDefault(); e.stopImmediatePropagation(); closeLog(); } }, true);
 function closeFaq() { document.getElementById("faqView").style.display = "none"; }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("faqView").style.display === "flex") { e.preventDefault(); e.stopImmediatePropagation(); closeFaq(); } }, true);
 function closeLegacy() {
@@ -528,7 +572,7 @@ function setVol(k, v) {
 }
 function startRebind(slot, action) { rebinding = { slot, action }; renderSettings(); }
 function bindable(key) {
-  if (!key || key === "escape" || key === "m" || key === "tab" || key === "meta" || key === "capslock" || key === "altgraph" || key === "dead" || key === "unidentified" || key === "contextmenu") return false;
+  if (!key || key === "escape" || key === "m" || key === "tab" || key === "meta" || key === "altgraph" || key === "dead" || key === "unidentified" || key === "contextmenu") return false;
   return !/^f\d+$/.test(key);
 }
 function assignBind(slot, action, key) {
@@ -552,13 +596,31 @@ function goFullscreen() {
     else document.documentElement.requestFullscreen();
   } catch (e) {}
 }
+// Browsers never let a page cancel Ctrl+W/T/N in a normal tab. Fullscreen + Keyboard Lock is the one official way
+// to capture them, so lock the game keys while fullscreen (Esc stays free for pause).
+function setKeyLock(on) {
+  try {
+    if (!navigator.keyboard || !navigator.keyboard.lock) return;
+    if (!on) { navigator.keyboard.unlock(); return; }
+    const codes = ["ControlLeft", "ControlRight", "AltLeft", "AltRight", "ShiftLeft", "ShiftRight"];
+    for (let c = 65; c <= 90; c++) codes.push("Key" + String.fromCharCode(c));
+    for (let d = 0; d <= 9; d++) codes.push("Digit" + d);
+    navigator.keyboard.lock(codes).catch(() => {});
+  } catch (e) {}
+}
+document.addEventListener("fullscreenchange", () => setKeyLock(!!document.fullscreenElement));
+// Safety net when not fullscreen: if a Ctrl key is bound, closing or leaving mid-match asks first.
+window.addEventListener("beforeunload", e => {
+  const b = boundKeySet();
+  if (gameStarted && !gameOver && !document.fullscreenElement && (b.controlleft || b.controlright)) { e.preventDefault(); e.returnValue = ""; }
+});
 function renderSettings() {
   document.getElementById("setTabs").innerHTML = SET_TABS.map(t => `<button class="${t[0] === setTab ? "on" : ""}" onclick="setTabTo('${t[0]}')">${t[1]}</button>`).join("");
   const tog = k => `<button class="toggle ${settings[k] ? "" : "off"}" onclick="toggleOpt('${k}')">${settings[k] ? "ON" : "OFF"}</button>`;
   const row = (label, ctl, note) => `<div class="set-row"><span>${label}${note ? `<br><span class="set-note">${note}</span>` : ""}</span>${ctl}</div>`;
   let h = "";
   if (setTab === "controls") {
-    h += '<p class="set-note">Click a key box, then press a key, a number, Ctrl, Alt, Shift or a mouse button (for left-click, click an empty spot in this panel). Esc cancels. If the key is already used, the two keys swap. M (sound) and Esc (pause) are reserved.</p>';
+    h += '<p class="set-note">Click a key box, then press a key, a number, Ctrl, Alt, Shift or a mouse button (for left-click, click an empty spot in this panel). Esc cancels. Browsers reserve shortcuts like Ctrl+W (close tab): use FULLSCREEN (Chrome/Edge) to capture them, otherwise the browser will ask before closing mid-match. If the key is already used, the two keys swap. M (sound) and Esc (pause) are reserved.</p>';
     for (let slot = 0; slot < 4; slot++) {
       h += `<div class="set-player"><b style="color:${settings.colors[slot]}">${SLOT_NAMES[slot]}</b><div class="set-grid">`;
       ACTIONS.forEach(([a, label]) => {
@@ -612,7 +674,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("keyup", e => { if (settingsOpen && rebinding) e.stopImmediatePropagation(); }, true);
 
 // Mouse buttons can be keybinds too: they feed the same keys/pressed tables as the keyboard.
-const MOUSE_UI = "button,input,select,textarea,a,label,#gamePanel,#settingsView,#faqView,#menu,#legacyView";
+const MOUSE_UI = "button,input,select,textarea,a,label,#gamePanel,#settingsView,#faqView,#logView,#menu,#legacyView";
 document.addEventListener("mousedown", e => {
   if (settingsOpen && rebinding) {
     if (e.button === 0 && e.target.closest && e.target.closest("button,input,select,a")) return; // a plain click on a button just cancels
@@ -633,6 +695,13 @@ document.addEventListener("mouseup", e => {
 }, true);
 document.addEventListener("auxclick", e => { if (gameStarted || (settingsOpen && rebinding)) e.preventDefault(); }, true);
 document.addEventListener("contextmenu", e => { if ((settingsOpen && rebinding) || (gameStarted && e.target.tagName === "CANVAS")) e.preventDefault(); });
+// Caps Lock on Mac sends one event per toggle (no real press/release), so there it acts as a short tap.
+const CAPS_TAP = /Mac|iPhone|iPad/.test(navigator.platform || "");
+let capsTimer = 0;
+function capsPulse() {
+  keys.capslock = true; pressed.capslock = true;
+  clearTimeout(capsTimer); capsTimer = setTimeout(() => { keys.capslock = false; }, 160);
+}
 function boundKeySet() { const o = {}; settings.binds.forEach(b => { for (const a in b) o[b[a]] = 1; }); return o; }
 document.addEventListener("keydown", e => {
   if (document.activeElement && document.activeElement.tagName === "INPUT") return;
@@ -645,12 +714,17 @@ document.addEventListener("keydown", e => {
   if (briefingOpen) { if (key === "enter") { e.preventDefault(); closeBriefing(); } return; }
   if (key === "escape") { e.preventDefault(); togglePause(); return; }
   if (["arrowup","arrowdown","arrowleft","arrowright"," ","enter","shiftleft","shiftright"].includes(key) || key.startsWith("numpad")) e.preventDefault();
+  if (key === "capslock" && CAPS_TAP) { capsPulse(); return; }
   if (!keys[key]) {
     pressed[key] = true;
   }
   keys[key] = true;
 });
-document.addEventListener("keyup", e => { keys[normalizeKey(e)] = false; });
+document.addEventListener("keyup", e => {
+  const key = normalizeKey(e);
+  if (key === "capslock" && CAPS_TAP) { capsPulse(); return; }
+  keys[key] = false;
+});
 window.addEventListener("blur", () => {
   for (const k in keys) keys[k] = false;
   if (settings.autoPause && gameStarted && !briefingOpen && !gameOver && !statsOpen && !settingsOpen && !legacyOpen && !paused) setPaused(true);
@@ -1378,8 +1452,8 @@ document.addEventListener("keydown", e => {
   const inGame = document.getElementById("gameArea").style.display === "flex";
   if (inGame && !gamePanelOpen) return;
   const vis = el => el.offsetParent !== null && !el.disabled;
-  const overlays = ["settingsView", "faqView", "gamePanel", "menu"].map(id => document.getElementById(id)).filter(el => el && getComputedStyle(el).display !== "none");
-  const root = (a && a.closest && a.closest("#settingsView, #faqView, #gamePanel, #menu")) || overlays[0];
+  const overlays = ["settingsView", "faqView", "logView", "gamePanel", "menu"].map(id => document.getElementById(id)).filter(el => el && getComputedStyle(el).display !== "none");
+  const root = (a && a.closest && a.closest("#settingsView, #faqView, #logView, #gamePanel, #menu")) || overlays[0];
   if (!root) return;
   const list = [...root.querySelectorAll("button")].filter(vis);
   if (!list.length) return;
